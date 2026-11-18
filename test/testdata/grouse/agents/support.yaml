@@ -19,5 +19,5 @@ ask:
       orders: { ask: [{ at: grouse/slack/chat/ask, in: "#orders-team" }], approvers: "orders:approve", within: 1d }
       infra: { ask: [{ at: grouse/slack/chat/ask, in: "#infra" }], approvers: "infra:approve", within: 1h }
 toolkits:
-  orders: { include: toolkits/orders.yaml, when: "${input.asker.scopes.includes('orders:read')}" }
-  infra: { include: toolkits/infra.yaml, when: "${input.asker.scopes.includes('infra:read')}" }
+  orders: { include: toolkits/orders/toolkit.yaml, when: "${input.asker.scopes.includes('orders:read')}" }
+  infra: { include: toolkits/infra/toolkit.yaml, when: "${input.asker.scopes.includes('infra:read')}" }

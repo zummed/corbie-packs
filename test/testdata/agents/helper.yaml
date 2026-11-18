@@ -22,4 +22,4 @@ ask:
     asker: "${input.asker.email}"
     request: "${input.messages.map((m) => (m.later != null ? '(a reminder the bot set) ' : '') + m.text).join('\\n')}"
 toolkits:
-  messages: { include: toolkits/messages.yaml, when: "${input.asker.scopes.includes('messages')}" }
+  messages: { include: toolkits/messages/toolkit.yaml, when: "${input.asker.scopes.includes('messages')}" }

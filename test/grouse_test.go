@@ -2,7 +2,7 @@ package test
 
 // The worked example, testdata/grouse, as a project: the bot grouse on Slack
 // and GitLab, the agent support with the toolkits orders and infra, the
-// project's own machines under infra/vms/, issue-log and deploys. Each test
+// machines the toolkit infra calls, issue-log and deploys. Each test
 // submits it with the Slack and GitLab stand-ins, a hypervisor's and the
 // stand-in model, and follows one case through it.
 
@@ -104,8 +104,8 @@ func newGrouse(t *testing.T, script map[string][]llmstandin.Reply, edit func(dir
 	point(t, g.dir, "slack", g.s.Server, slackHosts...)
 	point(t, g.dir, "gitlab", g.gl.Server)
 	for _, name := range []string{"status", "restart"} {
-		setSite(t, g.dir, "infra/vms/"+name+".yaml", "@net:", "@net.unencrypted:")
-		setSite(t, g.dir, "infra/vms/"+name+".js", "https://", "http://")
+		setSite(t, g.dir, "toolkits/infra/"+name+".yaml", "@net:", "@net.unencrypted:")
+		setSite(t, g.dir, "toolkits/infra/"+name+".js", "https://", "http://")
 	}
 	model := httptest.NewServer(&llmstandin.Server{Key: "sk-anthropic", Answer: g.answer})
 	t.Cleanup(model.Close)
@@ -114,8 +114,8 @@ func newGrouse(t *testing.T, script map[string][]llmstandin.Reply, edit func(dir
 	g.secretAt(project+"/grouse/slack", "SLACK_APP_TOKEN", "xapp-app")
 	g.secretAt(project+"/grouse/gitlab", "GITLAB_TOKEN", "gl-token")
 	g.valueAt(project+"/grouse/gitlab", "GITLAB_SITE", strings.TrimPrefix(g.gl.URL, "http://"))
-	g.secretAt(project+"/infra", "HYPERVISOR_KEY", "hv-key")
-	g.valueAt(project+"/infra", "HYPERVISOR", strings.TrimPrefix(g.hv.URL, "http://"))
+	g.secretAt(project+"/toolkits/infra", "HYPERVISOR_KEY", "hv-key")
+	g.valueAt(project+"/toolkits/infra", "HYPERVISOR", strings.TrimPrefix(g.hv.URL, "http://"))
 	g.secretAt(project+"/agents", "ANTHROPIC_KEY", "sk-anthropic")
 	g.s.mu.Lock()
 	for id, p := range grouseSlack {
@@ -374,7 +374,7 @@ var restartOrders2 = map[string][]llmstandin.Reply{
 //  3. The model is offered infra and not orders, opens infra, is given its instructions, and is shown vm_status and restart.
 //  4. restart is held, and the approval asks in #infra, quoting what Cy asked.
 //  5. Bo presses yes, the question checks his scopes, and shows his answer in place of the buttons.
-//  6. infra/vms/restart runs at its own location, which sends the hypervisor its key.
+//  6. toolkits/infra/restart runs at its own location, which sends the hypervisor its key.
 //  7. The reply is posted in the thread, and the status cleared.
 func TestGrouseOneQuestionRunByRun(t *testing.T) {
 	g := newGrouse(t, restartOrders2, nil)
@@ -440,7 +440,7 @@ func TestGrouseOneQuestionRunByRun(t *testing.T) {
 		t.Errorf("the question gave %v", got)
 	}
 	agent := stubs(t, g.world, "support")[0]
-	restarts := g.at("infra/vms/restart.yaml")
+	restarts := g.at("toolkits/infra/restart.yaml")
 	if len(restarts) != 1 || restarts[0].Cause.Run != agent.ID || restarts[0].Status != "done" {
 		t.Errorf("the restart's runs are %+v", restarts)
 	}
@@ -1039,7 +1039,9 @@ func projectFiles(t *testing.T, dir string) map[string]string {
 //  3. A changed toolkit while an approval waits cancels nothing: the approval and the restart finish, and the next turn is given the new instructions.
 func TestGrouseChangedFiles(t *testing.T) {
 	script := maps.Clone(restartOrders2)
-	script["orders-1 too"] = []llmstandin.Reply{calls("open", `{"toolkit": "infra"}`), calls("restart", `{"name": "orders-1"}`), {Text: "Restarted orders-1."}}
+	// infra stays open in the conversation while its instructions are as
+	// they were given, so the next message calls its tool at once.
+	script["orders-1 too"] = []llmstandin.Reply{calls("restart", `{"name": "orders-1"}`), {Text: "Restarted orders-1."}}
 	script["and orders-3"] = []llmstandin.Reply{calls("open", `{"toolkit": "infra"}`), {Text: "Opened."}}
 	g := newGrouse(t, script, nil)
 	g.say("UCY", "CSUP", "10.0", "", "<@UBOT> orders-2 is stuck, can you restart it?")
@@ -1075,7 +1077,7 @@ func TestGrouseChangedFiles(t *testing.T) {
 		t.Errorf("the next message's agent was told %q", calls[0].System)
 	}
 
-	setSite(t, g.dir, "toolkits/infra.md", "The virtual machines run on one hypervisor.", "The virtual machines run on two hypervisors.")
+	setSite(t, g.dir, "toolkits/infra/infra.md", "The virtual machines run on one hypervisor.", "The virtual machines run on two hypervisors.")
 	if receipt := g.syncAt(g.Client, g.dir, project); len(receipt.Tree.Cancelled) != 0 {
 		t.Errorf("the submit cancelled %v", receipt.Tree.Cancelled)
 	}

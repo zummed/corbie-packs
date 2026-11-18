@@ -1,6 +1,6 @@
-# The key is set at /<project>/infra and bound to the hypervisor's host, so
-# this run, at infra/vms/restart, sends it there and nowhere else, and the
-# agent's run, at agents/support, cannot read it.
+# The key is set at /<project>/toolkits/infra and bound to the hypervisor's
+# host, so this run, at toolkits/infra/restart, sends it there and nowhere
+# else, and the agent's run, at agents/support, cannot read it.
 flow: restart
 description: Restart one virtual machine by its name.
 input:

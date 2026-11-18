@@ -992,8 +992,9 @@ func TestGitLabToolFixesTheProject(t *testing.T) {
 	})
 	files := maps.Clone(placedCalls)
 	maps.Copy(files, map[string]string{
-		"agents/assistant.yaml": modelAgent("assistant", address, "toolkits:\n  orders: { include: toolkits/orders.yaml }\n"),
-		"toolkits/orders.yaml": `
+		"agents/assistant.yaml": modelAgent("assistant", address, "toolkits:\n  orders: { include: toolkits/orders/toolkit.yaml }\n"),
+		".corbieignore":         ignoring(t, "orders"),
+		"toolkits/orders/toolkit.yaml": `
 			description: The orders app.
 			tools:
 			  read_file: { call: grouse/gitlab/repository/files/read, input: { project: group/orders } }

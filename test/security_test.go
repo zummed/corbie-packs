@@ -79,8 +79,9 @@ func TestTwoPeopleInOneThreadKeepToolResultsApart(t *testing.T) {
 		return llmstandin.Reply{Text: "done for alice"}
 	})
 	write(t, dir, map[string]string{
-		"agents/assistant.yaml": modelAgent("assistant", url, "toolkits:\n  vault: { include: toolkits/vault.yaml }\n"),
-		"toolkits/vault.yaml": `
+		"agents/assistant.yaml": modelAgent("assistant", url, "toolkits:\n  vault: { include: toolkits/vault/toolkit.yaml }\n"),
+		".corbieignore":         ignoring(t, "vault"),
+		"toolkits/vault/toolkit.yaml": `
 			description: Notes.
 			tools:
 			  peek:
@@ -88,9 +89,9 @@ func TestTwoPeopleInOneThreadKeepToolResultsApart(t *testing.T) {
 			    args: {}
 			    job: { script: ./peek.js }
 		`,
-		"toolkits/peek.js":   `return "ALICE-SECRET-42"`,
-		"people/find.yaml":   telegramFind,
-		"people/scopes.yaml": scenarioPeople,
+		"toolkits/vault/peek.js": `return "ALICE-SECRET-42"`,
+		"people/find.yaml":       telegramFind,
+		"people/scopes.yaml":     scenarioPeople,
 		".rook/telegram/telegram.js": heard(
 			heardIn("5", "1", "dm", "alice one"), heardIn("5", "2", "dm", "bob one"),
 			heardIn("5", "1", "dm", "alice two"), heardIn("5", "2", "dm", "bob two")),
