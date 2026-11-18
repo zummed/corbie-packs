@@ -52,7 +52,7 @@ While you write
 - A router and Rook's listener write `receive: []`, so the router takes events only from its listener. Keep it: a machine sends nothing to a router.
 - Give a statechart a router sends to `receive:` naming that router, and a statechart run as a child its own `receive:`: a child run is addressed by its ID at its parent's location.
 - Give each job only the permissions it needs, in its `allow:` list.
-- Never ask for a secret's value or write one in a file. Give the person the command `corbie client secret set <NAME> --at /<project>/<location>`, where `<project>` is the project directory's name and `<location>` that of the machine that uses it, or its toolkit's directory.
+- Never ask for a secret's value or write one in a file. Give the person the command `corbie client secret set <NAME> --at /<project>/<location>`, where `<project>` is the project directory's name and `<location>` that of the machine that uses it, or its toolkit's directory. The command needs Corbie running: `corbie start controller runner ui &`.
 - For Slack, give the person the steps and the manifest under The Slack app in `corbie rook manual rook-project`, with their name and description.
 - Add a line under Notes in the project's `AGENTS.md` for what a later reader needs that the files do not say, such as what a toolkit is for.
 
