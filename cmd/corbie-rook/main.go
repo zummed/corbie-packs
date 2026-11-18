@@ -99,10 +99,10 @@ func cmdInit(e *cli.Env, args []string) error {
 	for _, service := range services {
 		at := "/" + filepath.Base(abs) + "/" + bot + "/" + service
 		for _, secret := range rook.Secrets[service] {
-			fmt.Fprintf(e.Out, "  corbie controller secret set %s --at %s\n", secret, at)
+			fmt.Fprintf(e.Out, "  corbie client secret set %s --at %s\n", secret, at)
 		}
 		for _, value := range rook.Values[service] {
-			fmt.Fprintf(e.Out, "  corbie controller value set %s %s --at %s\n", value.Name, value.Shown, at)
+			fmt.Fprintf(e.Out, "  corbie client value set %s %s --at %s\n", value.Name, value.Shown, at)
 		}
 		if fields, ok := rook.Placeholders[service]; ok {
 			fmt.Fprintf(e.Out, "  set the listener's %s in %s/%s/%s.yaml\n", fields, bot, service, bot)

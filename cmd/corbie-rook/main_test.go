@@ -109,11 +109,11 @@ func TestInitPrintsTheSecretsAndValuesOfItsServices(t *testing.T) {
 		t.Fatalf("init ended %d:\n%s", status, out)
 	}
 	for _, want := range []string{
-		"  corbie controller secret set GITLAB_TOKEN --at /my-bot/grouse/gitlab\n",
-		"  corbie controller value set GITLAB_SITE <host> --at /my-bot/grouse/gitlab\n",
-		"  corbie controller secret set JIRA_TOKEN --at /my-bot/grouse/jira\n",
-		"  corbie controller value set JIRA_SITE <host> --at /my-bot/grouse/jira\n",
-		"  corbie controller value set JIRA_EMAIL <email> --at /my-bot/grouse/jira\n",
+		"  corbie client secret set GITLAB_TOKEN --at /my-bot/grouse/gitlab\n",
+		"  corbie client value set GITLAB_SITE <host> --at /my-bot/grouse/gitlab\n",
+		"  corbie client secret set JIRA_TOKEN --at /my-bot/grouse/jira\n",
+		"  corbie client value set JIRA_SITE <host> --at /my-bot/grouse/jira\n",
+		"  corbie client value set JIRA_EMAIL <email> --at /my-bot/grouse/jira\n",
 		"  set the listener's projects: or group: in grouse/gitlab/grouse.yaml\n",
 		"  set the listener's projects: in grouse/jira/grouse.yaml\n",
 		"  cd my-bot && corbie run submit .\n",
@@ -179,7 +179,7 @@ func TestInitOfASecondBotSaysItNeedsItsOwnConversation(t *testing.T) {
 	step := "my-bot holds another bot, so hal needs a conversation of its own, as corbie rook manual rook-project says under Common changes: " +
 		"copy conversation.yaml to hal/conversation.yaml with the other bot's name in it changed to hal, change conversation to hal/conversation " +
 		"in the send: and allow: of hal's routers, and add hal/conversation to the receive: of each agent it calls. Then:\n\n"
-	secret := "  corbie controller secret set TELEGRAM_TOKEN --at /my-bot/hal/telegram\n"
+	secret := "  corbie client secret set TELEGRAM_TOKEN --at /my-bot/hal/telegram\n"
 	if !strings.Contains(out, secret+"\n"+step+"  cd my-bot && corbie test .\n") {
 		t.Errorf("init does not print the step after the secrets:\n%s", out)
 	}

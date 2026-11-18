@@ -140,7 +140,7 @@ var Secrets = map[string][]string{
 	"jira":     {"JIRA_TOKEN"},
 }
 
-// A Value is a value a service's machines read, set as corbie controller value
+// A Value is a value a service's machines read, set as corbie client value
 // set Name Shown, with what to write for Shown.
 type Value struct{ Name, Shown string }
 

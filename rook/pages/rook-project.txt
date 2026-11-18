@@ -8,30 +8,29 @@ agent can do.
 Start a project
 ---------------
 
-1. Make the project, naming its bot and the services it is on.
+1. Start Corbie, and make the project, naming its bot and the services it is on.
 2. For Slack, make the app first, as The Slack app below says.
 3. Add the agent, as Add an agent below says, and set each secret and value `init` names.
-4. Start Corbie, and submit the project.
+4. Submit the project.
 
     corbie init --ceiling all
+    corbie start controller runner ui &
     corbie rook init my-bot --bot grouse --services slack
       Make the Slack app first, as corbie rook manual rook-project says under The Slack app.
       my-bot is ready, and answers nobody until agents/assistant.yaml is there. Add it as corbie rook manual rook-project says under Add an agent, or ask a model in my-bot to. Then:
 
-        corbie controller secret set SLACK_TOKEN --at /my-bot/grouse/slack
-        corbie controller secret set SLACK_APP_TOKEN --at /my-bot/grouse/slack
+        corbie client secret set SLACK_TOKEN --at /my-bot/grouse/slack
+        corbie client secret set SLACK_APP_TOKEN --at /my-bot/grouse/slack
         cd my-bot && corbie run submit .
 
     cd my-bot
-    corbie start controller runner ui &
     corbie run submit .
 
 `corbie run submit .` records the project as the tree `/my-bot`, and starts
 each router, which starts its listener. A secret or a value set at
 `/my-bot/grouse/slack` is used by the Slack router and calls of the bot
 `grouse`, and one set at `/my-bot` by every run of the project. Set each at
-the narrowest location: one set with no `--at` is set at `/`, for every tree
-on the controller.
+the narrowest location.
 
 - Until the project has an agent, the bot answers anyone who names it with `This bot has no agent yet.`
 - Submit the project from a client no gateway uses: a gateway whose client submitted the project can call any of its locations with any input.
@@ -123,8 +122,8 @@ project, and do what `init` prints. The router it writes reads the project
 
       Then:
 
-        corbie controller secret set GITLAB_TOKEN --at /my-bot/grouse/gitlab
-        corbie controller value set GITLAB_SITE <host> --at /my-bot/grouse/gitlab
+        corbie client secret set GITLAB_TOKEN --at /my-bot/grouse/gitlab
+        corbie client value set GITLAB_SITE <host> --at /my-bot/grouse/gitlab
         set the listener's projects: or group: in grouse/gitlab/grouse.yaml
         corbie test .
         corbie run submit .
@@ -134,7 +133,7 @@ To add the agent:
 1. Give each person their email, as the service shows it, with their name and scopes, in `people/scopes.yaml`.
 2. Write `agents/assistant.yaml`, which includes `.rook/agent.yaml` and names its model.
 3. Write each toolkit in its own directory under `toolkits/`, list its file in `.corbieignore`, and place or write each machine its tools call.
-4. Set the model's secret: `corbie controller secret set ANTHROPIC_KEY --at /my-bot/agents`.
+4. Set the model's secret: `corbie client secret set ANTHROPIC_KEY --at /my-bot/agents`.
 
     # people/scopes.yaml, with two people
     ana@example.com: { name: Ana, scopes: [orders:read, orders:write] }
@@ -263,10 +262,10 @@ so nothing on the internet connects to this computer.
 2. Choose JSON, and paste the manifest below, with your name and
    description. Slack cannot turn an agent back into a plain app.
 3. Under Basic Information, App-Level Tokens, make a token with the scope
-   `connections:write`, and run `corbie controller secret set
+   `connections:write`, and run `corbie client secret set
    SLACK_APP_TOKEN --at /my-bot/grouse/slack`.
 4. Under Install App, install the app, and set its Bot User OAuth Token with
-   `corbie controller secret set SLACK_TOKEN --at /my-bot/grouse/slack`.
+   `corbie client secret set SLACK_TOKEN --at /my-bot/grouse/slack`.
 5. In `people/scopes.yaml`, give each person's email as Slack shows it in
    their profile, with their name and scopes.
 6. In each channel the bot should hear, run `/invite @Rook`.
