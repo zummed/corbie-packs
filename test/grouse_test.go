@@ -1039,7 +1039,9 @@ func projectFiles(t *testing.T, dir string) map[string]string {
 //  3. A changed toolkit while an approval waits cancels nothing: the approval and the restart finish, and the next turn is given the new instructions.
 func TestGrouseChangedFiles(t *testing.T) {
 	script := maps.Clone(restartOrders2)
-	script["orders-1 too"] = []llmstandin.Reply{calls("open", `{"toolkit": "infra"}`), calls("restart", `{"name": "orders-1"}`), {Text: "Restarted orders-1."}}
+	// infra stays open in the conversation while its instructions are as
+	// they were given, so the next message calls its tool at once.
+	script["orders-1 too"] = []llmstandin.Reply{calls("restart", `{"name": "orders-1"}`), {Text: "Restarted orders-1."}}
 	script["and orders-3"] = []llmstandin.Reply{calls("open", `{"toolkit": "infra"}`), {Text: "Opened."}}
 	g := newGrouse(t, script, nil)
 	g.say("UCY", "CSUP", "10.0", "", "<@UBOT> orders-2 is stuck, can you restart it?")
