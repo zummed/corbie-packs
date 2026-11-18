@@ -29,8 +29,9 @@ machine at its path under `/my-bot`, without `.yaml`. For a bot named
 
 A run uses the secrets and values set at its location or above. `init` prints
 the commands that set a service's at `/my-bot/grouse/<service>`, where the
-router, its listener and the service's calls run. Rook's approval runs as a
-child of the run that asks, at that run's location.
+router, its listener and the service's calls run, and a toolkit's are set at
+its directory, as `/my-bot/toolkits/infra`. Rook's approval runs as a child of
+the run that asks, at that run's location.
 
 How a message is answered
 -------------------------
@@ -362,7 +363,8 @@ An agent's toolkits are listed under `toolkits:`, each with a `when:` on the
 agent's input, so only a person whose scopes allow it is offered one. A tool
 written `call: <location>` calls a machine of the tree, taking its description
 and arguments from that machine, and fixing any of its input. `corbie rook
-manual rook-project` shows an agent and its toolkit under Add an agent.
+manual rook-project` shows an agent and its toolkit, in a directory of its
+own, under Add an agent.
 
 The lookup
 ----------
@@ -566,7 +568,7 @@ Who may do what
 ---------------
 
 1. Corbie's permissions apply first. A job may do only what its `allow:` says, within the ceilings, and a secret goes only to the host it is bound to.
-2. A service's secrets are set at `/my-bot/<bot>/<service>`, so the agent's run, at `/my-bot/agents/assistant`, cannot read them.
+2. A service's secrets are set at `/my-bot/<bot>/<service>`, and a toolkit's at `/my-bot/toolkits/<name>`, so the agent's run, at `/my-bot/agents/assistant`, cannot read them.
 3. An agent is allowed only its model. Its model calls the agent's own tools, the tools of each toolkit it was offered and opened, and Corbie's tools that read blobs.
 4. A toolkit is offered only when its `when:` holds on the agent's input, which holds the asker's scopes from the lookup.
 5. A tool marked `approve: true` waits for the agent's ask, which counts a press only from someone whose scopes hold its approvers.
