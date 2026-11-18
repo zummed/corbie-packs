@@ -133,24 +133,48 @@ func (w *world) newClient(name string) *client.Client {
 // named project, and a submit's prefix is by default / and that name.
 const project = "/project"
 
-// secret sets a secret at the project, as rook-project says to.
-func (w *world) secret(name, value string) { w.secretAt(project, name, value) }
+// secret sets a secret at the project as the world's client, as rook-project
+// says to.
+func (w *world) secret(name, value string) { w.clientSecret(project, name, value) }
 
-// secretAt sets a secret at a location.
-func (w *world) secretAt(at, name, value string) {
+// value sets a value at the project as the world's client.
+func (w *world) value(name, value string) { w.clientValue(project, name, value) }
+
+// clientSecret sets a secret at a location as the world's client, with
+// corbie client secret set.
+func (w *world) clientSecret(at, name, value string) {
 	w.t.Helper()
-	if err := secret.Set(context.Background(), w.controller.Store, w.controller.ID, at, name, value); err != nil {
+	w.taken(w.SetSecret(context.Background(), at, name, value, 0))
+}
+
+// clientValue sets a value at a location as the world's client, with
+// corbie client value set.
+func (w *world) clientValue(at, name, value string) {
+	w.t.Helper()
+	w.taken(w.SetValue(context.Background(), at, name, value, 0))
+}
+
+// taken waits for the controller's receipt of a client's set, and fails
+// the test when the set was refused.
+func (w *world) taken(message string, err error) {
+	w.t.Helper()
+	var receipt *instance.Receipt
+	if err == nil {
+		receipt, err = w.WaitReceipt(context.Background(), message, 0, interval)
+	}
+	if err != nil {
 		w.t.Fatal(err)
+	}
+	if !receipt.Taken {
+		w.t.Fatalf("the controller refused the set: %s", receipt.Refused)
 	}
 }
 
-// value sets a value at the project.
-func (w *world) value(name, value string) { w.valueAt(project, name, value) }
-
-// valueAt sets a value at a location.
-func (w *world) valueAt(at, name, value string) {
+// secretAt sets a secret at a location as the controller's owner does,
+// where the world's client may not set it.
+func (w *world) secretAt(at, name, value string) {
 	w.t.Helper()
-	if err := secret.SetValue(context.Background(), w.controller.Store, w.controller.ID, at, name, value); err != nil {
+	if err := secret.Set(context.Background(), w.controller.Store, w.controller.ID, at, name, value); err != nil {
 		w.t.Fatal(err)
 	}
 }
