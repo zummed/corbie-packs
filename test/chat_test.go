@@ -241,7 +241,7 @@ const houseToolkit = `
 	  lights:
 	    description: Which lights are on.
 	    args: {}
-	    job: { script: ./house/lights.js }
+	    job: { script: ./lights.js }
 	  tell:
 	    description: Write a text in a person's Telegram chat, by the chat's ID.
 	    args: { chat: string, text: string }
@@ -336,11 +336,12 @@ func houseProject(t *testing.T, w *world, tg *telegram, extra map[string]string)
 	t.Helper()
 	model, address := standin(t, w, houseModel)
 	files := map[string]string{
-		"agents/assistant.yaml":    modelAgent("assistant", address, houseAsk+"toolkits:\n  house: { include: toolkits/house.yaml, when: \"${input.asker.scopes.includes('house')}\" }\n"),
-		"toolkits/house.yaml":      houseToolkit,
-		"toolkits/house/lights.js": `return { on: ["kitchen", "hall"] }`,
-		"agents/team.yaml":         echoAgent("team"),
-		"agents/turn.js":           turnJS,
+		"agents/assistant.yaml":       modelAgent("assistant", address, houseAsk+"toolkits:\n  house: { include: toolkits/house/toolkit.yaml, when: \"${input.asker.scopes.includes('house')}\" }\n"),
+		"toolkits/house/toolkit.yaml": houseToolkit,
+		"toolkits/house/lights.js":    `return { on: ["kitchen", "hall"] }`,
+		".corbieignore":               ignoring(t, "house"),
+		"agents/team.yaml":            echoAgent("team"),
+		"agents/turn.js":              turnJS,
 	}
 	for k, v := range extra {
 		files[k] = v
@@ -934,9 +935,11 @@ func TestPageToolkitAndAgent(t *testing.T) {
 	w.secret("GITLAB_TOKEN", "gl-token")
 	w.value("GITLAB_SITE", strings.TrimPrefix(gl.URL, "http://"))
 	w.secret("ANTHROPIC_KEY", "sk-test")
-	for _, path := range []string{"agents/assistant.yaml", "toolkits/orders.yaml", "toolkits/orders.md", "grouse/gitlab/repository/files/read.yaml", "grouse/gitlab/repository/commits/create.yaml", ".corbieignore"} {
+	for _, path := range []string{"agents/assistant.yaml", "toolkits/orders/toolkit.yaml", "toolkits/orders/orders.md", "grouse/gitlab/repository/files/read.yaml", "grouse/gitlab/repository/commits/create.yaml"} {
 		writeRaw(t, dir, path, pageExample(t, "rook-project", path))
 	}
+	// The project holds testdata's toolkit messages too, whose file stays listed.
+	writeRaw(t, dir, ".corbieignore", pageExample(t, "rook-project", ".corbieignore")+"toolkits/messages/toolkit.yaml\n")
 	agent := pageExample(t, "rook-project", "agents/assistant.yaml")
 	writeRaw(t, dir, "agents/assistant.yaml", strings.Replace(agent, "model: { name: claude-sonnet-5-5, secret: ANTHROPIC_KEY }", "model: { name: claude-sonnet-5-5, service: anthropic, address: "+address+", secret: ANTHROPIC_KEY }", 1))
 	write(t, dir, map[string]string{"people/scopes.yaml": `alice@example.com: { name: alice, scopes: ["orders:read"] }`})

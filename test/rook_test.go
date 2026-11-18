@@ -57,8 +57,8 @@ const helperStub = `
 
 // exampleProject makes a project with a bot on the services given, as rook.Init
 // does, and puts testdata's files in it: the agents helper and team, the
-// toolkit messages, two people's scopes and a .corbieignore that lists
-// toolkits/. testdata/grouse, a project of its own, is left out.
+// toolkit messages, two people's scopes and a .corbieignore that lists the
+// toolkit's file. testdata/grouse, a project of its own, is left out.
 func exampleProject(dir string, services []string) error {
 	if err := rook.Init(dir, bot, services); err != nil {
 		return err
@@ -96,6 +96,20 @@ func realAgent(t *testing.T, dir, address string) {
 	if err := os.WriteFile(filepath.Join(dir, "agents/assistant.yaml"), []byte(written), 0o644); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// ignoring is testdata's .corbieignore with the file of each toolkit named
+// added, as toolkits/<name>/toolkit.yaml.
+func ignoring(t *testing.T, toolkits ...string) string {
+	t.Helper()
+	text, err := os.ReadFile("testdata/.corbieignore")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range toolkits {
+		text = append(text, "toolkits/"+name+"/toolkit.yaml\n"...)
+	}
+	return string(text)
 }
 
 // write writes files into a project, each dedented.
@@ -322,8 +336,8 @@ func TestAskPersonIsAnsweredByATap(t *testing.T) {
 
 // A project with a bot on every service reads: the routers are singletons
 // that receive from no location, the conversation is keyed, nothing under
-// .rook has a location, and .rook/, people/scopes.yaml and testdata's
-// toolkits/ are listed. Every machine Rook
+// .rook has a location, and .rook/, people/scopes.yaml and the file of
+// testdata's toolkit messages are listed. Every machine Rook
 // ships reads when it is placed, and its two included files read in an agent.
 func TestProjectReads(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "project")
@@ -376,7 +390,7 @@ func TestProjectReads(t *testing.T) {
 			t.Errorf("%s: %v", life, lifetimes[life])
 		}
 	}
-	if !reflect.DeepEqual(tree.Listed, []string{".rook/", "people/scopes.yaml", "toolkits/"}) {
+	if !reflect.DeepEqual(tree.Listed, []string{".rook/", "people/scopes.yaml", "toolkits/messages/toolkit.yaml"}) {
 		t.Errorf("the listed files are %q", tree.Listed)
 	}
 	for _, m := range tree.Machines {

@@ -64,9 +64,9 @@ func traceHelper(address, system string) map[string]string {
 			  machine: .rook/approval.yaml
 			  input: { ask: [{ at: grouse/telegram/chat/ask, in: "1" }], approvers: "messages:approve" }
 			toolkits:
-			  messages: { include: toolkits/messages.yaml }
+			  messages: { include: toolkits/messages/toolkit.yaml }
 		`,
-		"toolkits/messages.yaml": `
+		"toolkits/messages/toolkit.yaml": `
 			description: Messages to the people this bot knows, and the time.
 			tools:
 			  clock:
@@ -82,7 +82,7 @@ func traceHelper(address, system string) map[string]string {
 			      allow: [send:grouse/telegram/chat/post]
 			      approve: true
 		`,
-		"toolkits/clock.js": `return { zone: input.zone, time: "12:00" }`,
+		"toolkits/messages/clock.js": `return { zone: input.zone, time: "12:00" }`,
 	}
 }
 
@@ -492,7 +492,7 @@ func TestDeletedAgentWhileQuestionWaits(t *testing.T) {
 func TestFailedToolIsFollowed(t *testing.T) {
 	w := newWorld(t)
 	dir, model := traceProject(t, w, from("1", "what time is it", 10))
-	write(t, dir, map[string]string{"toolkits/clock.js": `throw new Error("the clock is broken")`})
+	write(t, dir, map[string]string{"toolkits/messages/clock.js": `throw new Error("the clock is broken")`})
 	w.sync(dir)
 	w.until("a question", func() bool { return len(questions(w)) == 1 })
 	agent := stubs(t, w, "assistant")[0].ID

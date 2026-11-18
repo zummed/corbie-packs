@@ -800,8 +800,8 @@ func TestSlackApprovalByButtonCanBeFollowed(t *testing.T) {
 		t.Fatal(err)
 	}
 	write(t, dir, map[string]string{
-		"toolkits/messages.yaml": slackMessages,
-		"agents/assistant.yaml":  strings.Replace(string(agent), `ask: [{ at: grouse/telegram/chat/ask, in: "1" }]`, `ask: [{ at: grouse/slack/chat/ask, in: "#approvals" }]`, 1),
+		"toolkits/messages/toolkit.yaml": slackMessages,
+		"agents/assistant.yaml":          strings.Replace(string(agent), `ask: [{ at: grouse/telegram/chat/ask, in: "1" }]`, `ask: [{ at: grouse/slack/chat/ask, in: "#approvals" }]`, 1),
 	})
 	replies := []llmstandin.Reply{
 		{Calls: []llmstandin.ToolCall{{ID: "c1", Name: "open", Args: `{"toolkit": "messages"}`}}},
@@ -988,8 +988,9 @@ func TestGitLabRequestApprovedOnSlack(t *testing.T) {
 	write(t, dir, map[string]string{
 		// The agent's ask is a yes on Slack, in alice's direct message, from
 		// someone who holds messages:approve.
-		"agents/assistant.yaml": modelAgent("assistant", url, "ask:\n  machine: .rook/approval.yaml\n  input: { ask: [{ at: grouse/slack/chat/ask, in: U1 }], approvers: \"messages:approve\", request: \"${input.messages.map((m) => m.text).join('\\\\n')}\" }\ntoolkits:\n  slack: { include: toolkits/slack.yaml }\n"),
-		"toolkits/slack.yaml":   slackApprovedToolkit,
+		"agents/assistant.yaml":       modelAgent("assistant", url, "ask:\n  machine: .rook/approval.yaml\n  input: { ask: [{ at: grouse/slack/chat/ask, in: U1 }], approvers: \"messages:approve\", request: \"${input.messages.map((m) => m.text).join('\\\\n')}\" }\ntoolkits:\n  slack: { include: toolkits/slack/toolkit.yaml }\n"),
+		"toolkits/slack/toolkit.yaml": slackApprovedToolkit,
+		".corbieignore":               ignoring(t, "slack"),
 	})
 	w.sync(dir)
 	w.until("Slack connected", s.connected)
