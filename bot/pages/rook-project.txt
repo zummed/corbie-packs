@@ -20,10 +20,10 @@ Start a project
     corbie init --ceiling all
     corbie start controller runner ui &
     mkdir my-bot && cd my-bot
-    corbie add github.com/zummed/corbie-rook/bot github.com/zummed/corbie-rook/slack --set BOT=grouse
-      .packs/bot     github.com/zummed/corbie-rook/bot  <commit>
+    corbie add github.com/zummed/corbie-packs/bot github.com/zummed/corbie-packs/slack --set BOT=grouse
+      .packs/bot     github.com/zummed/corbie-packs/bot  <commit>
       .packs/shared  needed by bot  <commit>
-      .packs/slack   github.com/zummed/corbie-rook/slack  <commit>
+      .packs/slack   github.com/zummed/corbie-packs/slack  <commit>
       .packs/shared  needed by slack  <commit>
 
       Wrote these starting files:
@@ -54,7 +54,7 @@ Start a project
 `corbie add` writes `grouse` in place of `BOT` in each starting file's path
 and text. It takes `--in <directory>` for a project that is not the current
 directory, a directory on this computer as a pack, and a tag, branch or
-commit after a pack, as `github.com/zummed/corbie-rook/slack@v0.8.0`.
+commit after a pack, as `github.com/zummed/corbie-packs/slack@v0.8.0`.
 
 Each service's secrets and values are set at `/my-bot/grouse/<service>`, a
 secret with `corbie client secret set <NAME> --at` and a value with `corbie
@@ -154,8 +154,8 @@ project, and set its secret and value. In the router `corbie add` writes,
 `grouse/gitlab/grouse.yaml`, give the listener's input `projects:` or
 `group:`: with neither the listener fails, saying so.
 
-    corbie add github.com/zummed/corbie-rook/gitlab --set BOT=grouse
-      .packs/gitlab  github.com/zummed/corbie-rook/gitlab  <commit>
+    corbie add github.com/zummed/corbie-packs/gitlab --set BOT=grouse
+      .packs/gitlab  github.com/zummed/corbie-packs/gitlab  <commit>
       .packs/shared  needed by gitlab  <commit>
 
       Wrote these starting files:
@@ -248,7 +248,7 @@ Common changes
   do something at a time                            a schedule under schedules/
   say what it is doing while it works               the agent's system text: when to use its tool progress
   come back later to check on something             the agent's system text: when to use its tool later
-  be on another service                             corbie add github.com/zummed/corbie-rook/<service> --set BOT=grouse
+  be on another service                             corbie add github.com/zummed/corbie-packs/<service> --set BOT=grouse
   be a second bot                                   corbie add each service's pack with --set BOT=<name>, and a second conversation
 
 - To send a channel's messages to a machine of your own, such as `deploys.yaml` in `.packs/bot/pages/rook-design.txt` under Asking a person, add a rule before the conversation's in the router, and `send:deploys` to its `allow:`. Write `receive: [grouse/slack/grouse]` in your machine, so no other location starts it:
@@ -278,8 +278,8 @@ Common changes
 
 - To post from a machine, call the bot's `chat/post` with `{ in, text }`, as `.packs/bot/pages/rook-design.txt` shows under Rook's calls.
 - To find people somewhere else, write `people/find.yaml` as a machine of your own that takes `{ service, user, name, email }` and gives `{ name, email, scopes }`.
-- To add a service, run `corbie add github.com/zummed/corbie-rook/<service> --set BOT=grouse`, set the service's secrets and values, and submit. The conversation answers every service already.
-- To add a second bot, run `corbie add github.com/zummed/corbie-rook/<service> --set BOT=<bot>` for each of its services, which writes no second `conversation.yaml`. Copy `conversation.yaml` to `<bot>/conversation.yaml` and change `grouse` in it to the new bot's name, so its `receive:` names the new bot's routers. In those routers, change the `send:` target and the `allow:` entry from `conversation` to `<bot>/conversation`. Add `<bot>/conversation` to the `receive:` of each agent it calls, as `receive: [conversation, <bot>/conversation]`.
+- To add a service, run `corbie add github.com/zummed/corbie-packs/<service> --set BOT=grouse`, set the service's secrets and values, and submit. The conversation answers every service already.
+- To add a second bot, run `corbie add github.com/zummed/corbie-packs/<service> --set BOT=<bot>` for each of its services, which writes no second `conversation.yaml`. Copy `conversation.yaml` to `<bot>/conversation.yaml` and change `grouse` in it to the new bot's name, so its `receive:` names the new bot's routers. In those routers, change the `send:` target and the `allow:` entry from `conversation` to `<bot>/conversation`. Add `<bot>/conversation` to the `receive:` of each agent it calls, as `receive: [conversation, <bot>/conversation]`.
 
 With a model
 ------------

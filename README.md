@@ -15,7 +15,7 @@ Install [Corbie](https://github.com/zummed/corbie). Make a project with the pack
 ```sh
 corbie init --ceiling all
 mkdir my-bot && cd my-bot
-corbie add github.com/zummed/corbie-rook/bot github.com/zummed/corbie-rook/slack --set BOT=grouse
+corbie add github.com/zummed/corbie-packs/bot github.com/zummed/corbie-packs/slack --set BOT=grouse
 less .packs/bot/pages/rook-project.txt
 ```
 

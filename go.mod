@@ -1,4 +1,4 @@
-module github.com/zummed/corbie-rook
+module github.com/zummed/corbie-packs
 
 go 1.27.1
 

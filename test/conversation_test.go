@@ -15,7 +15,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	rook "github.com/zummed/corbie-rook/rook"
+	rook "github.com/zummed/corbie-packs/rook"
 	"github.com/zummed/corbie/client"
 	llmstandin "github.com/zummed/corbie/plugin/llm/standin"
 )

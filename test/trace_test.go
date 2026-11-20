@@ -18,7 +18,7 @@ import (
 	"strings"
 	"testing"
 
-	rook "github.com/zummed/corbie-rook/rook"
+	rook "github.com/zummed/corbie-packs/rook"
 	"github.com/zummed/corbie/client"
 	"github.com/zummed/corbie/instance"
 	llmstandin "github.com/zummed/corbie/plugin/llm/standin"
