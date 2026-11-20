@@ -29,13 +29,13 @@ A new project
 `corbie add` starts a project with no agent, so the bot answers nobody.
 Before you write anything, ask the person:
 
-- who the bot is for, and each person's email and what they may do, for `people/scopes.yaml`
+- who the bot is for, and each person's email, or their ID on the service, and what they may do, for `people/scopes.yaml`
 - what the bot should do first, which gives the agent's toolkits and the machines their tools call
 - who says yes to a tool that changes something, and where the question is posted
 - which model the agent uses, and the name of the secret that holds its key; an agent may be a machine with no model
 
-A person on Telegram has no email, so they hold no scope unless the project's
-lookup finds them by their Telegram ID. Then add the agent as
+A person on Telegram has no email: their row is `telegram:<their Telegram
+ID>`. Then add the agent as
 `.packs/bot/pages/rook-project.txt` says under Add an agent, and give the
 person the commands that set each service's secrets and values, which that
 page names under Start a project.

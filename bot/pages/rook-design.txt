@@ -138,7 +138,7 @@ below but those under `<bot>/<service>/`, which that service's pack starts.
   later.yaml                         a reminder; include: .packs/bot/later.yaml
   ballot.yaml                        keyed: an approval asked in several places; include: .packs/bot/ballot.yaml
   answers.yaml                       keyed: one question's presses; include: .packs/bot/answers.yaml
-  people/scopes.yaml                 each email's name and scopes, which the lookup reads
+  people/scopes.yaml                 each person's name and scopes, which the lookup reads
   <bot>/<service>/<bot>.yaml         singleton: the router, and Rook's listener as its child
   <bot>/<service>/chat/post.yaml     include: .packs/<service>/chat/post.yaml
   <bot>/<service>/chat/ask.yaml      include: .packs/bot/chat/ask.yaml, with receive: and the service's router and chat/show
@@ -370,11 +370,14 @@ The lookup
 
 The lookup at `people/find` takes `{ service, user, name, email }` and gives
 `{ name, email, scopes }`. Rook's reads `people/scopes.yaml`, where each row
-is an email with a name and scopes, and matches the email, ignoring case.
+is a name and scopes under one of two keys:
 
-- An email the table does not hold, or none, gives no scopes and the name the service gave.
+  ana@example.com       an email, matched ignoring case
+  slack:U0123456789     a service and the message's `user`, matched as written, and read first
+
+- A person the table does not hold gets no scopes and the name the service gave, and the lookup's log names the keys it looked for.
 - A row that is not `{ name, scopes }` fails every lookup, naming the row.
-- Telegram gives no email, so a person on Telegram holds no scope unless a lookup of the project's own finds them by `user`, their Telegram ID.
+- Telegram gives no email, so a person on Telegram has a row `telegram:<their Telegram ID>`.
 - A lookup that asks a directory, such as Entra, takes and gives the same, and replaces `people/find.yaml` with no other change.
 
 Asking a person
@@ -578,11 +581,10 @@ What Rook does not defend against
 - A tool that sends to a destination its arguments choose can send whatever the run read. Give it `approve: true`.
 - Text a tool returns, such as an issue or a web page, and a thread's history, can tell the model to do things. Give each tool that changes something `approve: true`.
 - A redactor cleans only what is posted. The model sees every tool's whole result, and so does that person's next turn.
-- Rook takes a message's sender from the service, and trusts the email the service gives. A row in `people/scopes.yaml` gives its scopes to whoever the service says holds that email.
+- Rook takes a message's sender from the service, and trusts the ID and the email the service gives. A row in `people/scopes.yaml` gives its scopes to whoever the service says holds that ID or that email.
 - Slack gives the email of a person from another organisation in a Slack Connect channel as that organisation set it.
 - GitLab gives a person's public email, which they choose on their account, unless the token is an administrator's. A GitLab that does not confirm emails lets a person show someone else's.
-- Jira gives an email only where the person's privacy settings show it. Without one, the person holds no scope.
-- Telegram gives no email, so only a project's own lookup that finds a person by their Telegram ID gives them a scope.
+- Jira gives an email only where the person's privacy settings show it. Without one, the person's row is `jira:<their account ID>`.
 - The question refuses an asker's own press by email. When the lookup gives no email for the asker or the presser, a person's own press is not refused.
 - Rook's GitLab listener assumes that a change of labels or milestone moves the issue's `updated_at`, which GitLab's documentation does not say and which is not yet checked. If it does not, the change is heard only with the issue's next other change.
 - A person who sends more than 100 messages during one turn loses the rest.

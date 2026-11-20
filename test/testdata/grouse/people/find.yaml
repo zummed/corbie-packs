@@ -1,6 +1,5 @@
-# The lookup: a person's name, email and scopes, found by the email a service
-# gives. Rook's reads people/scopes.yaml, and matches the email only. Telegram
-# gives no email, so a person on Telegram holds no scope unless a lookup placed
-# here in its stead finds them by their Telegram ID. Such a lookup takes
-# { service, user, name, email } and gives { name, email, scopes }.
+# The lookup: a person's name, email and scopes, found in people/scopes.yaml by
+# the email a service gives or by their ID on the service. A lookup placed
+# here in its stead takes { service, user, name, email } and gives { name,
+# email, scopes }.
 include: .packs/bot/people/file.yaml

@@ -1,6 +1,8 @@
-# Each person's email, name and scopes, which people/find reads. An agent offers
-# a toolkit to a person whose scopes its when: names, and a question counts a
-# press from a person whose scopes hold its approvers.
+# Each person's name and scopes, which people/find reads, under their email or
+# under a service and their ID there. An agent offers a toolkit to a person
+# whose scopes its when: names, and a question counts a press from a person
+# whose scopes hold its approvers.
 #
 #   ana@example.com: { name: Ana, scopes: [orders:read, orders:approve] }
+#   telegram:123456789: { name: Di, scopes: [orders:read] }
 {}

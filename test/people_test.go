@@ -1,7 +1,7 @@
 package test
 
-// Rook's lookup, placed at people/find: who someone is, by their email, from
-// the table people/scopes.yaml.
+// Rook's lookup, placed at people/find: who someone is, by their email or
+// their ID on a service, from the table people/scopes.yaml.
 
 import (
 	"context"
@@ -31,15 +31,18 @@ func found(t *testing.T, w *world, table string, input map[string]any) string {
 	return fmt.Sprint(w.show(run.ID).Output)
 }
 
-// The lookup finds a person by their email, ignoring case, and gives the
-// table's name, email and scopes. An email the table does not hold, or none,
-// as Telegram gives, gives no scopes and the name the service gave, or with
-// none the person's ID on the service. The service's ID never finds a row.
-func TestLookupFindsAPersonByEmail(t *testing.T) {
+// The lookup finds a person by their email, ignoring case, or by a service
+// and their ID there, which it reads first, and gives the table's name and
+// scopes, with the email the row or the service gave. A person the table does
+// not hold gets no scopes and the name the service gave, or with none their ID
+// on the service. An ID with no service, or with another's, finds no row.
+func TestLookupFindsAPersonByEmailOrID(t *testing.T) {
 	table := `
 		ana@acme.example: { name: Ana, scopes: [orders:read, orders:write] }
 		bo@acme.example:  { name: Bo,  scopes: [infra:read, infra:approve] }
-		"12345": { name: Telegram, scopes: [infra:approve] }
+		"12345": { name: Bare, scopes: [infra:approve] }
+		telegram:12345: { name: Tom T, scopes: [infra:read] }
+		slack:U3: { scopes: [orders:read] }
 		cy@acme.example: { name: Cy }
 	`
 	for _, c := range []struct {
@@ -48,11 +51,13 @@ func TestLookupFindsAPersonByEmail(t *testing.T) {
 	}{
 		{map[string]any{"service": "slack", "user": "U1", "name": "Bo B", "email": "Bo@Acme.Example"}, "map[email:bo@acme.example name:Bo scopes:[infra:read infra:approve]]"},
 		{map[string]any{"service": "slack", "user": "U2", "name": "Eve", "email": "eve@acme.example"}, "map[email:eve@acme.example name:Eve scopes:[]]"},
-		{map[string]any{"service": "telegram", "user": "12345", "name": "Tom"}, "map[email: name:Tom scopes:[]]"},
+		{map[string]any{"service": "telegram", "user": "12345", "name": "Tom"}, "map[email: name:Tom T scopes:[infra:read]]"},
+		{map[string]any{"service": "slack", "user": "12345", "name": "Tom"}, "map[email: name:Tom scopes:[]]"},
+		{map[string]any{"service": "slack", "user": "U3", "name": "Bo B", "email": "bo@acme.example"}, "map[email:bo@acme.example name:Bo B scopes:[orders:read]]"},
 		{map[string]any{"service": "gitlab", "user": "7"}, "map[email: name:7 scopes:[]]"},
 		{map[string]any{"email": "cy@acme.example"}, "map[email:cy@acme.example name:Cy scopes:[]]"},
 	} {
-		t.Run(fmt.Sprint(c.input["email"], c.input["user"]), func(t *testing.T) {
+		t.Run(fmt.Sprint(c.input["email"], c.input["service"], c.input["user"]), func(t *testing.T) {
 			w := newWorld(t)
 			if got := found(t, w, table, c.input); got != c.want {
 				t.Errorf("the lookup gave %s", got)
