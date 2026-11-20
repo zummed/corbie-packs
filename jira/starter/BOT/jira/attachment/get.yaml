@@ -1,2 +1,2 @@
-# Rook's Jira download, which fetches the files a message names.
+# The pack's Jira download, which fetches the files a message names.
 include: .packs/jira/attachment/get.yaml

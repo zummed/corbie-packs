@@ -1,6 +1,6 @@
-Rook design: the runs that answer a message, what each machine takes and gives, and who may do what.
+Bot design: the runs that answer a message, what each machine takes and gives, and who may do what.
 
-Rook is ready-made Corbie machines, in packs. `corbie add` writes each pack
+The packs are ready-made Corbie machines. `corbie add` writes each pack
 into the project's `.packs/`, which `.corbieignore` lists, so none of them
 has a location. The project places each one it uses with a file of one line,
 and its own machines, the routers, the conversation, the agents and their
@@ -14,7 +14,7 @@ directory named `my-bot`. Each `*.yaml` that `.corbieignore` does not list is a
 machine at its path under `/my-bot`, without `.yaml`. For a bot named
 `grouse` on Slack:
 
-  /my-bot/grouse/slack/grouse             singleton: the router, and Rook's listener as its child run
+  /my-bot/grouse/slack/grouse             singleton: the router, and the pack's listener as its child run
   /my-bot/conversation                    keyed <service>:<chat>:<user>:assistant: one person in one thread
   /my-bot/agents/assistant                called by the conversation for each turn
   /my-bot/people/find                     called for who someone is: the lookup
@@ -30,7 +30,7 @@ machine at its path under `/my-bot`, without `.yaml`. For a bot named
 A run uses the secrets and values set at its location or above. A service's
 are set at `/my-bot/grouse/<service>`, where the router, its listener and the
 service's calls run, and a toolkit's are set at its directory, as
-`/my-bot/toolkits/infra`. Rook's approval runs as a child of
+`/my-bot/toolkits/infra`. The pack's approval runs as a child of
 the run that asks, at that run's location.
 
 How a message is answered
@@ -139,7 +139,7 @@ below but those under `<bot>/<service>/`, which that service's pack starts.
   ballot.yaml                        keyed: an approval asked in several places; include: .packs/bot/ballot.yaml
   answers.yaml                       keyed: one question's presses; include: .packs/bot/answers.yaml
   people/scopes.yaml                 each person's name and scopes, which the lookup reads
-  <bot>/<service>/<bot>.yaml         singleton: the router, and Rook's listener as its child
+  <bot>/<service>/<bot>.yaml         singleton: the router, and the pack's listener as its child
   <bot>/<service>/chat/post.yaml     include: .packs/<service>/chat/post.yaml
   <bot>/<service>/chat/ask.yaml      include: .packs/bot/chat/ask.yaml, with receive: and the service's router and chat/show
   <bot>/<service>/chat/show.yaml     include: .packs/<service>/chat/show.yaml, with receive:
@@ -168,13 +168,13 @@ others' files name them.
   .packs/bot/filters/                    words.yaml and words.js, a filter; model.yaml, included by an agent that is one
   .packs/shared/                         the scripts the conversation and the services share, and press.yaml
   .packs/bot/AGENTS.md                   what a model is told
-  .packs/bot/pages/                      this page, and rook-project.txt
+  .packs/bot/pages/                      this page, and bot-project.txt
 
 A router and its listener
 -------------------------
 
 A router is a singleton statechart of the project's. Its one state runs
-Rook's listener as a child job, which sends `message`, `answer` and `stop` to
+the pack's listener as a child job, which sends `message`, `answer` and `stop` to
 its parent, and names no other location. The router's rules say where each
 goes.
 
@@ -199,7 +199,7 @@ goes.
 
 - A rule can only send, and a send goes only to a statechart: a singleton's run, or a keyed run, which it starts. A post or a lookup is a call, so the conversation makes it.
 - An answer goes only to a run of `answers`, whatever the button holds, which sends it on only to the question that opened it.
-- `receive: []`, in the router and in Rook's listener, refuses a send from any location, so the router takes events only from its listener, and the listener sends only what its service gave.
+- `receive: []`, in the router and in the pack's listener, refuses a send from any location, so the router takes events only from its listener, and the listener sends only what its service gave.
 - `restart: { after: always }` starts the listener again when it ends. A listener whose read fails waits, then reads again.
 - A listener reads a value when it starts. After changing one, run `corbie run cancel /my-bot/grouse/<service>/grouse`, then `corbie run submit .`.
 
@@ -296,7 +296,7 @@ each turn is a flow it runs as a child, whose stages are written in the file.
 
 A filter for messages the router sends marked `unaddressed`, and a redactor
 for what is posted outside a direct message, are stages the project adds, as
-`.packs/bot/pages/rook-project.txt` shows under Common changes.
+`.packs/bot/pages/bot-project.txt` shows under Common changes.
 
   a conversation        the service, the place and the first line, as slack #help: …
   a turn                its messages' texts
@@ -362,14 +362,14 @@ An agent's toolkits are listed under `toolkits:`, each with a `when:` on the
 agent's input, so only a person whose scopes allow it is offered one. A tool
 written `call: <location>` calls a machine of the tree, taking its description
 and arguments from that machine, and fixing any of its input.
-`.packs/bot/pages/rook-project.txt` shows an agent and its toolkit, in a
+`.packs/bot/pages/bot-project.txt` shows an agent and its toolkit, in a
 directory of its own, under Add an agent.
 
 The lookup
 ----------
 
 The lookup at `people/find` takes `{ service, user, name, email }` and gives
-`{ name, email, scopes }`. Rook's reads `people/scopes.yaml`, where each row
+`{ name, email, scopes }`. The pack's reads `people/scopes.yaml`, where each row
 is a name and scopes under one of two keys:
 
   ana@example.com       an email, matched ignoring case
@@ -425,7 +425,7 @@ approval ask in several places at once.
 A later `settled` is dropped. The ballot ends when its approval sends it
 `over`, or a day after it settled.
 
-Rook's approval, `.packs/bot/approval.yaml`, is an ask, which an agent or another
+The pack's approval, `.packs/bot/approval.yaml`, is an ask, which an agent or another
 machine names under `ask:`. It asks the question in every place of `ask` at
 once, with yes and no, naming the asker by email and each held call with its
 arguments, and quoting what was asked and what the agent said. An argument of
@@ -494,12 +494,12 @@ presses yes.
 - The approval runs at the asking machine's location, so the question's `receive:` lists that location, or the call is refused.
 - The approval gives each question the ballot `{ at: ballot, key: <the approval's run ID>/<n> }`, `<n>` numbering the calls it asks about apart. Its answer is the first that counts in any place; a place whose question fails leaves the others asking.
 - A held call that is not approved fails as `denied`, which goes back to a model as the tool's result.
-- The router sends the thread's messages to `deploys`, as `.packs/bot/pages/rook-project.txt` shows under Common changes.
+- The router sends the thread's messages to `deploys`, as `.packs/bot/pages/bot-project.txt` shows under Common changes.
 
-Rook's calls
+The packs' calls
 ------------
 
-Each of Rook's calls has a `description:` and an `input:`, so a toolkit's
+Each of the packs' calls has a `description:` and an `input:`, so a toolkit's
 tool can name it with `call:`. A project places one with a file of one line,
 as `grouse/gitlab/pipeline/create.yaml` above, and any machine of the project
 may call it with `send:` for it in its `allow:`.
@@ -575,25 +575,25 @@ Who may do what
 4. A toolkit is offered only when its `when:` holds on the agent's input, which holds the asker's scopes from the lookup.
 5. A tool marked `approve: true` waits for the agent's ask, which counts a press only from someone whose scopes hold its approvers.
 
-What Rook does not defend against
+What the packs do not defend against
 ---------------------------------
 
 - A tool that sends to a destination its arguments choose can send whatever the run read. Give it `approve: true`.
 - Text a tool returns, such as an issue or a web page, and a thread's history, can tell the model to do things. Give each tool that changes something `approve: true`.
 - A redactor cleans only what is posted. The model sees every tool's whole result, and so does that person's next turn.
-- Rook takes a message's sender from the service, and trusts the ID and the email the service gives. A row in `people/scopes.yaml` gives its scopes to whoever the service says holds that ID or that email.
+- A listener takes a message's sender from the service, and the lookup trusts the ID and the email the service gives. A row in `people/scopes.yaml` gives its scopes to whoever the service says holds that ID or that email.
 - Slack gives the email of a person from another organisation in a Slack Connect channel as that organisation set it.
 - GitLab gives a person's public email, which they choose on their account, unless the token is an administrator's. A GitLab that does not confirm emails lets a person show someone else's.
 - Jira gives an email only where the person's privacy settings show it. Without one, the person's row is `jira:<their account ID>`.
 - The question refuses an asker's own press by the email or the `<service>:<ID>` given as `asker`. A person asked for by ID who presses on another service, or one asked for by an email the lookup does not give for the presser, is not refused.
-- Rook's GitLab listener assumes that a change of labels or milestone moves the issue's `updated_at`, which GitLab's documentation does not say and which is not yet checked. If it does not, the change is heard only with the issue's next other change.
+- The pack's GitLab listener assumes that a change of labels or milestone moves the issue's `updated_at`, which GitLab's documentation does not say and which is not yet checked. If it does not, the change is heard only with the issue's next other change.
 - A person who sends more than 100 messages during one turn loses the rest.
 - Anyone who can change the directory can change every rule above but the first. Guard it by review in git.
 
 Reference
 ---------
 
-  .packs/bot/pages/rook-project.txt    making a project, and the common changes
+  .packs/bot/pages/bot-project.txt    making a project, and the common changes
   corbie manual a-directory            the tree, .corbieignore, and a file of one line that places a machine
   corbie manual machines-together      sends, calls and receive:
   corbie manual approval               how a held job waits for its ask

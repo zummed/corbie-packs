@@ -1,3 +1,3 @@
-# The GitLab part of Rook's question, which only the question calls.
+# The GitLab part of the pack's question, which only the question calls.
 include: .packs/gitlab/chat/show.yaml
 receive: [BOT/gitlab/chat/ask]

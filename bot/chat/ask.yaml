@@ -1,4 +1,4 @@
-# Rook's question, the same on every service, which an approval calls, and any
+# The pack's question, the same on every service, which an approval calls, and any
 # machine may. It calls the service's chat/show at `show` to post `text` in
 # `in` with a choice for each of `choices`, and waits. A press counts when the
 # presser's scopes, as the lookup at `lookup` gives them, hold `approvers`,

@@ -631,7 +631,7 @@ func questionIn(w *world, j *jira) string {
 	return id
 }
 
-// approvingOnJira makes a project whose agents/approve is Rook's approval,
+// approvingOnJira makes a project whose agents/approve is the pack's approval,
 // starts it for a held call, asking on the issue in, and gives its run.
 // Jira's people include alice, who may approve, and bob, who asked.
 func approvingOnJira(t *testing.T, j *jira, in, within string) (*world, string) {

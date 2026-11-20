@@ -1,6 +1,6 @@
 package test
 
-// Rook's lookup, placed at people/find: who someone is, by their email or
+// The pack's lookup, placed at people/find: who someone is, by their email or
 // their ID on a service, from the table people/scopes.yaml.
 
 import (

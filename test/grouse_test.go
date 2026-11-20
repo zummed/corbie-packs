@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	rook "github.com/zummed/corbie-packs/rook"
+	"github.com/zummed/corbie-packs/fixture"
 	"github.com/zummed/corbie/client"
 	"github.com/zummed/corbie/machine"
 	llmstandin "github.com/zummed/corbie/plugin/llm/standin"
@@ -95,7 +95,7 @@ type grouse struct {
 }
 
 // newGrouse copies the example, runs init in it as a person does after
-// updating Rook, points it at the stand-ins, and submits it. edit, when
+// updating the packs, points it at the stand-ins, and submits it. edit, when
 // given, changes the copy before it is submitted.
 func newGrouse(t *testing.T, script map[string][]llmstandin.Reply, edit func(dir string)) *grouse {
 	t.Helper()
@@ -148,7 +148,7 @@ func grouseCopy(t *testing.T) string {
 	if err := os.CopyFS(dir, os.DirFS("testdata/grouse")); err != nil {
 		t.Fatal(err)
 	}
-	if err := rook.Init(dir, bot, []string{"slack", "gitlab"}); err != nil {
+	if err := fixture.Init(dir, bot, []string{"slack", "gitlab"}); err != nil {
 		t.Fatal(err)
 	}
 	return dir
@@ -968,7 +968,7 @@ toolkits:
 func TestGrouseInitKeepsTheProject(t *testing.T) {
 	empty := filepath.Join(t.TempDir(), "empty")
 	for range 2 {
-		if err := rook.Init(empty, bot, []string{"slack", "gitlab"}); err != nil {
+		if err := fixture.Init(empty, bot, []string{"slack", "gitlab"}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -982,7 +982,7 @@ func TestGrouseInitKeepsTheProject(t *testing.T) {
 
 	dir := grouseCopy(t)
 	before := projectFiles(t, dir)
-	if err := rook.Init(dir, bot, []string{"slack", "gitlab"}); err != nil {
+	if err := fixture.Init(dir, bot, []string{"slack", "gitlab"}); err != nil {
 		t.Fatal(err)
 	}
 	after := projectFiles(t, dir)
@@ -996,7 +996,7 @@ func TestGrouseInitKeepsTheProject(t *testing.T) {
 	if original := projectFiles(t, "testdata/grouse"); !maps.Equal(original, after) {
 		t.Errorf("init wrote other files than .packs/bot/: %v", slices.Sorted(maps.Keys(after)))
 	}
-	differ, err := rook.Differ(dir, bot)
+	differ, err := fixture.Differ(dir, bot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1013,7 +1013,7 @@ func projectFiles(t *testing.T, dir string) map[string]string {
 	out := map[string]string{}
 	err := filepath.WalkDir(dir, func(name string, d fs.DirEntry, err error) error {
 		rel, _ := filepath.Rel(dir, name)
-		if err != nil || rel == rook.Shipped {
+		if err != nil || rel == fixture.Shipped {
 			if err == nil {
 				err = fs.SkipDir
 			}

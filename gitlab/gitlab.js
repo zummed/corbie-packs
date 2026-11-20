@@ -42,13 +42,13 @@ function attachments(text, project) {
 }
 
 // A question is a comment of the bot's that ends with a line GitLab does not
-// show: <!-- rook question <key> <choice> ... --> while it waits, each choice
-// URL-encoded, and a later comment of the bot's that holds <!-- rook answered
+// show: <!-- bot question <key> <choice> ... --> while it waits, each choice
+// URL-encoded, and a later comment of the bot's that holds <!-- bot answered
 // <key> --> closes it. The listener reads these lines only in the bot's own
 // comments, and the bot writes them only at the end of a question and of the
 // comment that closes it: every text it is given to write has them taken out.
-const askedLine = /<!-- rook question (\S+)((?: \S+)+) -->/
-const closedLine = /<!-- rook answered (\S+) -->/
+const askedLine = /<!-- bot question (\S+)((?: \S+)+) -->/
+const closedLine = /<!-- bot answered (\S+) -->/
 function unmarked(text) {
   let out = String(text)
   while (askedLine.test(out) || closedLine.test(out)) out = out.replace(askedLine, "").replace(closedLine, "")
@@ -67,7 +67,7 @@ if (input.do === "hear") return hear()
 if (input.do === "ask") {
   const { project, iid } = chatOf(input.in)
   const choices = input.choices.map(String)
-  const line = "<!-- rook question " + input.question + " " + choices.map(encodeURIComponent).join(" ") + " -->"
+  const line = "<!-- bot question " + input.question + " " + choices.map(encodeURIComponent).join(" ") + " -->"
   const body = unmarked(input.text) + "\n\nAnswer with a comment that says " + choices.map((c) => "`" + c + "`").join(" or ") + ".\n\n" + line
   call("POST", issuePath(project, iid) + "/notes", { json: { body: body } })
   return { sent: { in: input.in, question: input.question }, where: "GitLab" }
@@ -85,7 +85,7 @@ if (input.do === "tell") {
 if (input.do === "close") {
   // A comment on the question's issue that closes the question.
   const { project, iid } = chatOf(input.sent.in)
-  const body = unmarked(input.said) + "\n\n<!-- rook answered " + input.sent.question + " -->"
+  const body = unmarked(input.said) + "\n\n<!-- bot answered " + input.sent.question + " -->"
   call("POST", issuePath(project, iid) + "/notes", { json: { body: body } })
   return {}
 }

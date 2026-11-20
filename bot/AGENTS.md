@@ -1,11 +1,11 @@
-Rook: ready-made Corbie machines for a bot that answers people on Telegram, Slack, GitLab issues and Jira issues.
+Bot: ready-made Corbie machines for a bot that answers people on Telegram, Slack, GitLab issues and Jira issues.
 
-A person has asked you to set up or change a Rook project. `corbie add`
-writes Rook's packs into the project's `.packs/`, and the project's own files
+A person has asked you to set up or change a project made from these packs. `corbie add`
+writes the packs into the project's `.packs/`, and the project's own files
 say where each message goes, who someone is, and what each agent can do. The
 person runs `corbie add`, and you do not.
 
-Rook's pages are files under `.packs/bot/pages/`. Read a page of Corbie's
+The packs' pages are files under `.packs/bot/pages/`. Read a page of Corbie's
 with the manual tool of corbie mcp, or in a shell with `corbie manual
 <page>`. Run a command with the corbie tool, or in a shell. Either runs in
 the project, so the project is `.`.
@@ -13,8 +13,8 @@ the project, so the project is `.`.
 Before you change a project
 ---------------------------
 
-1. Read `.packs/bot/pages/rook-project.txt` and
-   `.packs/bot/pages/rook-design.txt`. They give the project's files, what to
+1. Read `.packs/bot/pages/bot-project.txt` and
+   `.packs/bot/pages/bot-design.txt`. They give the project's files, what to
    change for what the person wants, and what each machine takes and gives.
 2. Read the project's files, and the notes in its `AGENTS.md`. Read
    `.packs/`, and change nothing there, since `corbie add` rewrites it.
@@ -36,27 +36,27 @@ Before you write anything, ask the person:
 
 A person on Telegram has no email: their row is `telegram:<their Telegram
 ID>`. Then add the agent as
-`.packs/bot/pages/rook-project.txt` says under Add an agent, and give the
+`.packs/bot/pages/bot-project.txt` says under Add an agent, and give the
 person the commands that set each service's secrets and values, which that
 page names under Start a project.
 
 While you write
 ---------------
 
-- Choose each change with the table under Common changes in `.packs/bot/pages/rook-project.txt`.
+- Choose each change with the table under Common changes in `.packs/bot/pages/bot-project.txt`.
 - Name scopes as `<toolkit>:<what>`, such as `orders:read` and `orders:approve`, and give a toolkit a `when:` on the asker's scopes on its entry in the agent's file.
 - Write each toolkit in its own directory, as `toolkits/orders/`, with its file `toolkit.yaml`, its instructions and the machines written for its tools, and list `toolkits/orders/toolkit.yaml` in `.corbieignore`.
 - Write a tool that uses no secret in place in the toolkit's file, or as `call: <location>` of a call the project places. Write a tool that uses a secret as `call: <location>` of a machine in the toolkit's directory, since a tool written in place runs at the agent's location. A schedule, another machine or a client can run that machine without the agent.
 - Give a tool `approve: true` when it changes something, and a `call:` an `input:` fixing what the model must not choose.
-- Give an agent with a held tool an `ask:` that runs `.packs/bot/approval.yaml`, with `asker: "${input.asker.email}"`, or for people with no email `asker: "${input.asker.email || input.messages[0].service + ':' + input.messages[0].user}"`, so the approvers see who asked and nobody approves their own request, a `request:` that marks a reminder's note as the bot's, and in `ask:` each place to ask, as `{ at, in }`, as `.packs/bot/pages/rook-project.txt` shows. To ask other people about a toolkit or a tool, give it an entry of `by:`.
-- Place a call of Rook's with a file of one line under `<bot>/<service>/`, as `include: .packs/gitlab/pipeline/create.yaml`.
+- Give an agent with a held tool an `ask:` that runs `.packs/bot/approval.yaml`, with `asker: "${input.asker.email}"`, or for people with no email `asker: "${input.asker.email || input.messages[0].service + ':' + input.messages[0].user}"`, so the approvers see who asked and nobody approves their own request, a `request:` that marks a reminder's note as the bot's, and in `ask:` each place to ask, as `{ at, in }`, as `.packs/bot/pages/bot-project.txt` shows. To ask other people about a toolkit or a tool, give it an entry of `by:`.
+- Place a call of a pack's with a file of one line under `<bot>/<service>/`, as `include: .packs/gitlab/pipeline/create.yaml`.
 - Add a location that calls the bot's `chat/ask` to the `receive:` of its placed file, or the call is refused.
 - An agent that includes `.packs/bot/agent.yaml` takes calls only from `conversation`. When another conversation calls it, write `receive:` in the agent naming both.
-- A router and Rook's listener write `receive: []`, so the router takes events only from its listener. Keep it: a machine sends nothing to a router.
+- A router and the pack's listener write `receive: []`, so the router takes events only from its listener. Keep it: a machine sends nothing to a router.
 - Give a statechart a router sends to `receive:` naming that router, and a statechart run as a child its own `receive:`: a child run is addressed by its ID at its parent's location.
 - Give each job only the permissions it needs, in its `allow:` list.
 - Never ask for a secret's value or write one in a file. Give the person the command `corbie client secret set <NAME> --at /<project>/<location>`, where `<project>` is the project directory's name and `<location>` that of the machine that uses it, or its toolkit's directory. The command needs Corbie running: `corbie start controller runner ui &`.
-- For Slack, give the person the steps and the manifest under The Slack app in `.packs/bot/pages/rook-project.txt`, with their name and description.
+- For Slack, give the person the steps and the manifest under The Slack app in `.packs/bot/pages/bot-project.txt`, with their name and description.
 - Add a line under Notes in the project's `AGENTS.md` for what a later reader needs that the files do not say, such as what a toolkit is for.
 
 After you change a project
@@ -64,7 +64,7 @@ After you change a project
 
 1. Run each script you wrote that needs no secret with `corbie test`.
 2. Run `corbie test .`, which reads every machine and starts nothing.
-3. Tell the person each file you added or changed, by Rook's name for it
+3. Tell the person each file you added or changed, by the packs' name for it
    (agent, toolkit, tool, scope, router, schedule), and why. Tell them what
    each job is allowed, and who each toolkit is offered to.
 4. Give the person `corbie run submit .`, to run where the bot runs. Run it
@@ -76,7 +76,7 @@ After you change a project
 
 After `corbie add` updates a project, it names the project's files that are
 not as their pack starts them. A pack's starting files are under its
-`starter/` directory in Rook's repository, where `BOT` is the bot's name.
+`starter/` directory in the packs' repository, where `BOT` is the bot's name.
 When the person gives you those files, compare each with the project's, and
 tell the person what differs and what each difference does. Change nothing
 until they say which to take.
@@ -84,5 +84,5 @@ until they say which to take.
 Reference
 ---------
 
-  .packs/bot/pages/rook-project.txt    making a project, and the common changes
-  .packs/bot/pages/rook-design.txt     the runs that answer a message, what each machine takes and gives, and who may do what
+  .packs/bot/pages/bot-project.txt    making a project, and the common changes
+  .packs/bot/pages/bot-design.txt     the runs that answer a message, what each machine takes and gives, and who may do what

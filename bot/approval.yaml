@@ -1,4 +1,4 @@
-# Rook's approval, which a machine names as its ask. It asks the question in
+# The pack's approval, which a machine names as its ask. It asks the question in
 # every place of `ask` at once, each a bot's placed chat/ask, with yes and no,
 # naming the machine that asks, each held job, who asked and what was asked.
 # Corbie gives it `asking` and `jobs`; the ask's input gives the rest:

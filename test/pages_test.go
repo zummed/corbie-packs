@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	rook "github.com/zummed/corbie-packs/rook"
+	"github.com/zummed/corbie-packs/fixture"
 	"github.com/zummed/corbie/client"
 )
 
@@ -55,12 +55,12 @@ func examples(t *testing.T, page string) []example {
 // with the path of a starting file is that file, without its comments.
 func TestEveryExampleFileReads(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "project")
-	if err := rook.Init(dir, bot, rook.Services()); err != nil {
+	if err := fixture.Init(dir, bot, fixture.Services()); err != nil {
 		t.Fatal(err)
 	}
-	starting := rook.Starting(bot)
+	starting := fixture.Starting(bot)
 	var shown []string
-	for _, page := range []string{"rook-project", "rook-design"} {
+	for _, page := range []string{"bot-project", "bot-design"} {
 		for _, ex := range examples(t, page) {
 			if _, ok := starting[ex.path]; ok && ex.label == ex.path {
 				kept, err := os.ReadFile(filepath.Join(dir, ex.path))
@@ -117,7 +117,7 @@ func TestEveryExampleFileReads(t *testing.T) {
 // Each page's first line is its title and the sentence that is its summary, and
 // it ends with what to read next.
 func TestEveryPageIsWrittenAsCorbiesAre(t *testing.T) {
-	for _, page := range rook.Pages() {
+	for _, page := range fixture.Pages() {
 		first, _, _ := strings.Cut(page.Text, "\n")
 		if title, sentence, ok := strings.Cut(first, ": "); !ok || title == "" || !strings.HasSuffix(sentence, ".") || page.Summary != first {
 			t.Errorf("%s begins %q", page.Name, first)

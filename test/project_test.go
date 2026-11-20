@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	rook "github.com/zummed/corbie-packs/rook"
+	"github.com/zummed/corbie-packs/fixture"
 	"github.com/zummed/corbie/client"
 	"github.com/zummed/corbie/instance"
 	llmstandin "github.com/zummed/corbie/plugin/llm/standin"
@@ -55,12 +55,12 @@ const helperStub = `
 	  e: { end: done, output: { reply: "${input.messages.map((m) => m.text).join('\\n')}", conversation: "${(input.conversation || 0) + 1}" } }
 `
 
-// exampleProject makes a project with a bot on the services given, as rook.Init
+// exampleProject makes a project with a bot on the services given, as fixture.Init
 // does, and puts testdata's files in it: the agents helper and team, the
 // toolkit messages, two people's scopes and a .corbieignore that lists the
 // toolkit's file. testdata/grouse, a project of its own, is left out.
 func exampleProject(dir string, services []string) error {
-	if err := rook.Init(dir, bot, services); err != nil {
+	if err := fixture.Init(dir, bot, services); err != nil {
 		return err
 	}
 	return filepath.WalkDir("testdata", func(name string, d fs.DirEntry, err error) error {
@@ -337,11 +337,11 @@ func TestAskPersonIsAnsweredByATap(t *testing.T) {
 // A project with a bot on every service reads: the routers are singletons
 // that receive from no location, the conversation is keyed, nothing under
 // .packs has a location, and .packs/bot/, people/scopes.yaml and the file of
-// testdata's toolkit messages are listed. Every machine Rook
+// testdata's toolkit messages are listed. Every machine a pack
 // ships reads when it is placed, and its two included files read in an agent.
 func TestProjectReads(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "project")
-	if err := exampleProject(dir, rook.Services()); err != nil {
+	if err := exampleProject(dir, fixture.Services()); err != nil {
 		t.Fatal(err)
 	}
 	placed := map[string]string{
@@ -349,8 +349,8 @@ func TestProjectReads(t *testing.T) {
 		"agents/interested.yaml": "agent: interested\ninclude: .packs/bot/filters/model.yaml\nmodel: { name: test-model, service: anthropic, secret: TEST_KEY }\n" +
 			"system:\n  - { include: .packs/bot/filters/model.yaml#system }\n  - The bot answers questions about the build.\n",
 	}
-	err := filepath.WalkDir(filepath.Join(dir, rook.Shipped), func(name string, d fs.DirEntry, err error) error {
-		rel, _ := filepath.Rel(filepath.Join(dir, rook.Shipped), name)
+	err := filepath.WalkDir(filepath.Join(dir, fixture.Shipped), func(name string, d fs.DirEntry, err error) error {
+		rel, _ := filepath.Rel(filepath.Join(dir, fixture.Shipped), name)
 		if err != nil || d.IsDir() || !strings.HasSuffix(name, ".yaml") || rel == "bot/agent.yaml" || rel == "bot/filters/model.yaml" {
 			return err
 		}
@@ -361,7 +361,7 @@ func TestProjectReads(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(placed) < 25 {
-		t.Fatalf("Rook ships only %d machines", len(placed))
+		t.Fatalf("the packs ship only %d machines", len(placed))
 	}
 	write(t, dir, placed)
 	tree, err := client.ReadTree(dir, project)
@@ -408,7 +408,7 @@ func TestProjectReads(t *testing.T) {
 // every service's machines.
 func TestInitWritesTheTree(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "project")
-	if err := rook.Init(dir, "grouse", []string{"slack", "gitlab"}); err != nil {
+	if err := fixture.Init(dir, "grouse", []string{"slack", "gitlab"}); err != nil {
 		t.Fatal(err)
 	}
 	var got []string
@@ -417,7 +417,7 @@ func TestInitWritesTheTree(t *testing.T) {
 		switch {
 		case err != nil:
 			return err
-		case rel == rook.Shipped:
+		case rel == fixture.Shipped:
 			return filepath.SkipDir
 		case !d.IsDir():
 			got = append(got, rel)
@@ -442,22 +442,22 @@ func TestInitWritesTheTree(t *testing.T) {
 		}
 	}
 	for _, service := range []string{"slack", "gitlab"} {
-		if _, err := os.Stat(filepath.Join(dir, rook.Shipped, service, "listen.yaml")); err != nil {
+		if _, err := os.Stat(filepath.Join(dir, fixture.Shipped, service, "listen.yaml")); err != nil {
 			t.Errorf(".packs lacks %s's listener: %v", service, err)
 		}
 	}
 	for _, service := range []string{"jira", "telegram"} {
-		if _, err := os.Stat(filepath.Join(dir, rook.Shipped, service)); err == nil {
+		if _, err := os.Stat(filepath.Join(dir, fixture.Shipped, service)); err == nil {
 			t.Errorf(".packs holds %s, which was not added", service)
 		}
 	}
 }
 
-// No file Rook writes into a project names a model, or a model's key: a
+// No file a pack writes into a project names a model, or a model's key: a
 // project with no model works, and one with a model names it.
-func TestNoModelInWhatRookWrites(t *testing.T) {
-	for _, top := range append([]string{rook.Bot, rook.Shared}, rook.Services()...) {
-		top = filepath.Join(rook.Root(), top)
+func TestNoModelInWhatAPackWrites(t *testing.T) {
+	for _, top := range append([]string{fixture.Bot, fixture.Shared}, fixture.Services()...) {
+		top = filepath.Join(fixture.Root(), top)
 		filepath.WalkDir(top, func(name string, d fs.DirEntry, err error) error {
 			// The pages show a project's agent, which names its model.
 			if err == nil && d.IsDir() && d.Name() == "pages" {
@@ -491,7 +491,7 @@ func TestNoModelInWhatRookWrites(t *testing.T) {
 // changed stays changed, and one they removed stays removed.
 func TestAddAgainKeepsThePersonsFiles(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "project")
-	if err := rook.Init(dir, "grouse", []string{"slack"}); err != nil {
+	if err := fixture.Init(dir, "grouse", []string{"slack"}); err != nil {
 		t.Fatal(err)
 	}
 	mine := "bo@example.com: { name: Bo, scopes: [ops] }\n"
@@ -508,7 +508,7 @@ func TestAddAgainKeepsThePersonsFiles(t *testing.T) {
 		}
 	}
 	for range 2 {
-		if err := rook.Init(dir, "grouse", []string{"slack"}); err != nil {
+		if err := fixture.Init(dir, "grouse", []string{"slack"}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -522,10 +522,10 @@ func TestAddAgainKeepsThePersonsFiles(t *testing.T) {
 			t.Errorf("%s, a starting file the person removed, came back", name)
 		}
 	}
-	if got, _ := os.ReadFile(filepath.Join(dir, ".packs/bot/AGENTS.md")); !strings.HasPrefix(string(got), "Rook: ") {
-		t.Errorf(".packs/bot/AGENTS.md is %q, and not the page rook", got)
+	if got, _ := os.ReadFile(filepath.Join(dir, ".packs/bot/AGENTS.md")); !strings.HasPrefix(string(got), "Bot: ") {
+		t.Errorf(".packs/bot/AGENTS.md is %q, and not the page bot", got)
 	}
-	if differ, err := rook.Differ(dir, bot); err != nil || !reflect.DeepEqual(differ, []string{".corbieignore", "grouse/slack/grouse.yaml", "people/scopes.yaml"}) {
+	if differ, err := fixture.Differ(dir, bot); err != nil || !reflect.DeepEqual(differ, []string{".corbieignore", "grouse/slack/grouse.yaml", "people/scopes.yaml"}) {
 		t.Errorf("the files not as the packs start them are %v, %v", differ, err)
 	}
 	if got, _ := os.ReadFile(filepath.Join(dir, ".packs/slack/listen.yaml")); string(got) == "changed" {
@@ -653,7 +653,7 @@ func undelivered(w *world, id string) []string {
 // calls it starts with, as a project that places only some of its calls.
 func packOnly(t *testing.T, dir, service string) {
 	t.Helper()
-	if err := rook.Init(dir, bot, []string{service}); err != nil {
+	if err := fixture.Init(dir, bot, []string{service}); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.RemoveAll(filepath.Join(dir, bot, service)); err != nil {

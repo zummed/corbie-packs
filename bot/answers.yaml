@@ -1,4 +1,4 @@
-# Rook's answers: one run for each question, at the key the question's buttons
+# The pack's answers: one run for each question, at the key the question's buttons
 # and lines hold, which sends the question each answer from its router. A
 # button holds this key, and not the question's run ID, which grows with the
 # client's name: Telegram keeps 64 bytes of a button.

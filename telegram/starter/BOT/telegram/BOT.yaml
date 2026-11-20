@@ -1,4 +1,4 @@
-# The router of BOT on Telegram. It runs Rook's Telegram listener as a child,
+# The router of BOT on Telegram. It runs the pack's Telegram listener as a child,
 # and sends each direct message to the conversation, keyed by the chat, the
 # person and the agent. It sends a tap on a question's button to `answers`,
 # which sends it on to that question, and /stop to the conversation. The token

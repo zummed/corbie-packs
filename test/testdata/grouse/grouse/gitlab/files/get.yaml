@@ -1,2 +1,2 @@
-# Rook's GitLab download, which fetches the files a message names.
+# The pack's GitLab download, which fetches the files a message names.
 include: .packs/gitlab/files/get.yaml

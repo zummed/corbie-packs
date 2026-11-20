@@ -418,7 +418,7 @@ func (tg *telegram) waitFor(w *world, chat, text string) {
 // A gitlab stands in for GitLab's REST API: projects and their issues, each
 // issue's notes and resource events, users, uploads to group/project,
 // repository files, commits and pipelines. The bot is user 1, "bot", and its
-// token gl-token. A project is named by its path, URL-encoded, as Rook names
+// token gl-token. A project is named by its path, URL-encoded, as the listener names
 // it. A list is given a page at a time, with the headers GitLab gives for
 // offset paging.
 type gitlab struct {

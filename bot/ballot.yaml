@@ -1,4 +1,4 @@
-# Rook's ballot, which settles an approval asked in several places at once:
+# The pack's ballot, which settles an approval asked in several places at once:
 # the first answer that counts ends the question everywhere else. The
 # approval gives each question it asks the address { at: ballot, key: <the
 # approval's run ID> }, and a question with that address sends it:

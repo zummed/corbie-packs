@@ -1,4 +1,4 @@
-# Rook's later, which an agent's tool `later` starts, one run for each
+# The pack's later, which an agent's tool `later` starts, one run for each
 # reminder. After `minutes` it sends the conversation's run at `back` a
 # message from the person the reminder was set for, its text the note and
 # `later` the minutes it waited, so that the agent takes a turn and does what

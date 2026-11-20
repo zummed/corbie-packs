@@ -1,2 +1,2 @@
-# Rook's Slack download, which fetches the files a message names.
+# The pack's Slack download, which fetches the files a message names.
 include: .packs/slack/files/get.yaml

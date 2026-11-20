@@ -1,6 +1,6 @@
 package test
 
-// Rook's approval and question: a held job waits for a press from someone
+// The pack's approval and question: a held job waits for a press from someone
 // whose scopes hold the approvers, the asker's own press and a press without
 // the scope are refused and the presser told, the first press that counts
 // closes the question, and no press within `within` is no. An approval asked
@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	rook "github.com/zummed/corbie-packs/rook"
+	"github.com/zummed/corbie-packs/fixture"
 	"github.com/zummed/corbie/client"
 	"github.com/zummed/corbie/instance"
 	llmstandin "github.com/zummed/corbie/plugin/llm/standin"
@@ -253,7 +253,7 @@ func TestApprovedToolFails(t *testing.T) {
 
 // The approver is shown what was asked and what the agent said as it asked,
 // quoted, so that a line the asker or a model led by a message wrote, such as
-// "Tool: progress", never reads as Rook's own.
+// "Tool: progress", never reads as the bot's own.
 func TestApproverIsShownNoForgedLine(t *testing.T) {
 	w := newWorld(t)
 	_, address := standin(t, w, func(c llmstandin.Call) llmstandin.Reply {
@@ -275,7 +275,7 @@ func TestApproverIsShownNoForgedLine(t *testing.T) {
 	}
 	for _, line := range strings.Split(text, "\n") {
 		if strings.HasPrefix(line, "Approved") || strings.HasPrefix(line, "Tool: progress") || strings.HasPrefix(line, "Arguments: {}") {
-			t.Errorf("the approver is shown, as Rook's own, a line the model or the asker wrote: %q in\n%s", line, text)
+			t.Errorf("the approver is shown, as the bot's own, a line the model or the asker wrote: %q in\n%s", line, text)
 		}
 	}
 }
@@ -397,7 +397,7 @@ func TestPressThatCannotBeCheckedDoesNotCount(t *testing.T) {
 }
 
 // A statechart with no model asks for approval as an agent does: its ask is
-// Rook's approval, and a job marked approve: true waits for a press from
+// the pack's approval, and a job marked approve: true waits for a press from
 // someone with the approvers' scope, then runs.
 func TestStatechartAsksForApproval(t *testing.T) {
 	w := newWorld(t)
@@ -486,7 +486,7 @@ func TestApprovalFromAChatGetsToTheApprover(t *testing.T) {
 	_, address := toolModel(t, "told", tellCarol()...)
 	dir := approvalProject(t, w, address)
 	write(t, dir, map[string]string{
-		router("telegram"):            rook.Starting(bot)[router("telegram")],
+		router("telegram"):            fixture.Starting(bot)[router("telegram")],
 		".packs/telegram/telegram.js": heard(map[string]any{"service": "telegram", "place": "dm", "chat": "2", "user": "2", "name": "Bob", "text": "tell carol hello", "answers": "2:10"}),
 	})
 	w.sync(dir)
@@ -686,8 +686,8 @@ func TestApprovalFitsTheQuestion(t *testing.T) {
 		t.Fatalf("the question calls chat/show %d times", len(calls))
 	}
 	shows, _ := filepath.Glob("../*/chat/show.yaml")
-	if len(shows) != len(rook.Services()) {
-		t.Fatalf("Rook ships chat/show only at %v", shows)
+	if len(shows) != len(fixture.Services()) {
+		t.Fatalf("the packs ship chat/show only at %v", shows)
 	}
 	for _, name := range shows {
 		takes := read(name)["input"].(map[string]any)

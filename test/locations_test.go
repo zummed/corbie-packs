@@ -12,7 +12,7 @@ import (
 	"github.com/zummed/corbie/instance"
 )
 
-// These tests are of what a project's tree gives Rook: who may send to its
+// These tests are of what a project's tree gives the packs: who may send to its
 // runs, how its runs live through changes, and how a message is followed from
 // its router to every run it led to.
 

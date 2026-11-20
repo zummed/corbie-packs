@@ -1,4 +1,4 @@
-# Telegram's part of Rook's question, which only the question calls. ask
+# Telegram's part of the pack's question, which only the question calls. ask
 # posts `text` in the chat `in` with a button for each of `choices`; tell
 # shows a presser `text` in an alert over the chat or, once Telegram no longer
 # takes one, in their own chat with the bot; close shows the question's `text`

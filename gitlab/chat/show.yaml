@@ -1,4 +1,4 @@
-# GitLab's part of Rook's question, which only the question calls. ask writes
+# GitLab's part of the pack's question, which only the question calls. ask writes
 # `text` as a comment on the issue `in`, project#iid, that asks for a comment
 # saying one of `choices`; tell writes a comment telling `by` `text`; close
 # writes `said` in a comment.

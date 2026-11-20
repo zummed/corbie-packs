@@ -1,2 +1,2 @@
-# Rook's GitLab post, which the conversation calls with { in, text }.
+# The pack's GitLab post, which the conversation calls with { in, text }.
 include: .packs/gitlab/chat/post.yaml

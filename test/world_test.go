@@ -133,7 +133,7 @@ func (w *world) newClient(name string) *client.Client {
 // named project, and a submit's prefix is by default / and that name.
 const project = "/project"
 
-// secret sets a secret at the project as the world's client, as rook-project
+// secret sets a secret at the project as the world's client, as bot-project
 // says to.
 func (w *world) secret(name, value string) { w.clientSecret(project, name, value) }
 
@@ -338,7 +338,7 @@ func (w *world) until(what string, cond func() bool) {
 		if time.Now().After(end) {
 			if runs, err := w.List(context.Background(), client.Filter{Finished: true}); err == nil {
 				for _, run := range runs {
-					if os.Getenv("ROOK_RUNS") != "" {
+					if os.Getenv("PACKS_RUNS") != "" {
 						full := w.show(run.ID)
 						w.t.Logf("%s %s %s in=%v out=%v", run.Machine, run.Status, run.Error, full.Input, full.Output)
 					}

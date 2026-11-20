@@ -1,4 +1,4 @@
-# Rook's question. It takes calls only from the locations in receive:, and an
+# The pack's question. It takes calls only from the locations in receive:, and an
 # answer only from the router at `router`, which sends each press of its
 # buttons to `answers`. An agent's approval calls it from agents/, and the
 # approval of deploys from deploys. It takes close from the ballot, and calls

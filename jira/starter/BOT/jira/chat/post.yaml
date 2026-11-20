@@ -1,2 +1,2 @@
-# Rook's Jira post, which the conversation calls with { in, text }.
+# The pack's Jira post, which the conversation calls with { in, text }.
 include: .packs/jira/chat/post.yaml

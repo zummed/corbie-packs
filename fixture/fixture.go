@@ -1,6 +1,6 @@
-// Package rook is what the tests use to make a project from the packs of
+// Package fixture is what the tests use to make a project from the packs of
 // this repository, as corbie add does.
-package rook
+package fixture
 
 import (
 	"io/fs"
@@ -99,18 +99,18 @@ func Differ(dir, bot string) ([]string, error) {
 // its summary.
 func Pages() []manual.Page {
 	var out []manual.Page
-	for _, name := range []string{"rook", "rook-project", "rook-design"} {
+	for _, name := range []string{"bot", "bot-project", "bot-design"} {
 		text, _ := os.ReadFile(pagePath(name))
 		summary, _, _ := strings.Cut(string(text), "\n")
-		out = append(out, manual.Page{Name: name, Group: "Rook", Summary: summary, Text: string(text)})
+		out = append(out, manual.Page{Name: name, Group: "Packs", Summary: summary, Text: string(text)})
 	}
 	return out
 }
 
-// pagePath gives the file of a page: the page rook is the pack's AGENTS.md,
+// pagePath gives the file of a page: the page bot is the pack's AGENTS.md,
 // which a model is told.
 func pagePath(name string) string {
-	if name == "rook" {
+	if name == "bot" {
 		return filepath.Join(Root(), Bot, "AGENTS.md")
 	}
 	return filepath.Join(Root(), Bot, "pages", name+".txt")

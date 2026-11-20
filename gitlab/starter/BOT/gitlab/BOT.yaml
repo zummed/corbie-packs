@@ -1,4 +1,4 @@
-# The router of BOT on GitLab. It runs Rook's GitLab listener as a child, and
+# The router of BOT on GitLab. It runs the pack's GitLab listener as a child, and
 # sends each comment that names the bot, and each opened issue that does, to
 # the conversation, keyed by the issue, the person and the agent. It drops the
 # bot's own comments and the changes. It sends an answer to a question to

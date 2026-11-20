@@ -15,7 +15,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	rook "github.com/zummed/corbie-packs/rook"
+	"github.com/zummed/corbie-packs/fixture"
 	"github.com/zummed/corbie/client"
 	llmstandin "github.com/zummed/corbie/plugin/llm/standin"
 )
@@ -270,7 +270,7 @@ func TestStarterAnswersNobody(t *testing.T) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := rook.Init(dir, bot, []string{"telegram"}); err != nil {
+	if err := fixture.Init(dir, bot, []string{"telegram"}); err != nil {
 		t.Fatal(err)
 	}
 	point(t, dir, "telegram", tg.Server, "api.telegram.org")

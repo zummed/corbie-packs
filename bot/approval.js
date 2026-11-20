@@ -10,7 +10,7 @@
 // For each job a group is shown what the agent said as it asked and the job's
 // arguments, then who asked and what was asked. What the agent said, what was
 // asked and an argument of more than one line are quoted, each line after
-// "> ", so that no line of them reads as Rook's own. The job's name is in the
+// "> ", so that no line of them reads as the bot's own. The job's name is in the
 // question's first line, and is given again here only when there are several.
 const quoted = (text) => String(text).split("\n").map((line) => "> " + line).join("\n")
 // A value of one line longer than this, such as a link or a file's content,

@@ -1,4 +1,4 @@
-# The router of BOT on Slack. It runs Rook's Slack listener as a child, and
+# The router of BOT on Slack. It runs the pack's Slack listener as a child, and
 # sends each direct message and each message that names the bot to the
 # conversation, keyed by the thread, the person and the agent. It sends a press
 # of a question's button to `answers`, which sends it on to that question, and

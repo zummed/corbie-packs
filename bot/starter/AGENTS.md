@@ -1,6 +1,6 @@
 # This project
 
-This is a Rook project. Read `.packs/bot/AGENTS.md` before changing it:
+This project is made from Corbie packs. Read `.packs/bot/AGENTS.md` before changing it:
 `corbie add` writes that file, and it says how to change the project.
 
 @.packs/bot/AGENTS.md
@@ -8,4 +8,4 @@ This is a Rook project. Read `.packs/bot/AGENTS.md` before changing it:
 ## Notes
 
 What a model or a person changing this project needs to know about it goes
-here: what the bot is for, its toolkits, and anything not in Rook's manual.
+here: what the bot is for, its toolkits, and anything not in the packs' pages.

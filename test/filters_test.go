@@ -1,6 +1,6 @@
 package test
 
-// Rook's filters for a message that does not name the bot: one matches words,
+// The pack's filters for a message that does not name the bot: one matches words,
 // and one asks a small model. Each gives { reply: { answer } }.
 
 import (

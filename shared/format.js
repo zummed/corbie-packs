@@ -24,7 +24,7 @@ const ways = {
   telegram: "Your reply is shown on Telegram as plain text: write no Markdown, and no tables.",
   gitlab: "Your reply is a comment on a GitLab issue, in GitLab Flavored Markdown. GitLab draws a fenced block marked mermaid as a diagram.\n\n" + chart + " GitLab shows a chart as a table.",
   console: "The person is at a screen. Open the toolkit screen first, in every conversation: it shows panels (charts, tables, choices, diagrams, plans, progress) and your aura, and it is how you answer here. Show anything better seen than read as a panel, and keep your reply short beside it, in Markdown; a fenced block marked mermaid is drawn as a diagram.",
-  jira: "Your reply is a comment on a Jira issue, in Markdown, which Rook writes as Jira's wiki markup.\n\n" + chart + " Jira shows a chart as a table.",
+  jira: "Your reply is a comment on a Jira issue, in Markdown, which the bot writes as Jira's wiki markup.\n\n" + chart + " Jira shows a chart as a table.",
 }
 // Only an agent's last text is its reply, so text written beside a tool call is lost.
 const last = "Only what you write after your last tool call is shown, so write the whole reply there."

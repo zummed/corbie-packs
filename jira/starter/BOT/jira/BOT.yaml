@@ -1,4 +1,4 @@
-# The router of BOT on Jira. It runs Rook's Jira listener as a child, and sends
+# The router of BOT on Jira. It runs the pack's Jira listener as a child, and sends
 # each comment that names the bot, and each opened issue that does, to the
 # conversation, keyed by the issue, the person and the agent. It sends an
 # answer to a question to `answers`, which sends it on to that question. The

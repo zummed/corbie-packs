@@ -1,4 +1,4 @@
-# Jira's part of Rook's question, which only the question calls. ask writes
+# Jira's part of the pack's question, which only the question calls. ask writes
 # `text` as a comment on the issue `in`, its key in any case or its ID, with a
 # line for each of `choices` that holds the choice and the question's run ID;
 # tell writes a comment that names who answered and tells them `text`; close
