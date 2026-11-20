@@ -1,10 +1,11 @@
 // Whether a press counts, given the press and who the lookup says the presser
 // is. An email, and the choice, are compared ignoring case: a choice written in
-// a comment, as on Jira, is the choice it matches.
+// a comment, as on Jira, is the choice it matches. The asker is an email, or a
+// service and the person's ID there, as telegram:123456789.
 const answer = input.answer, who = input.who || {}
 const matched = input.choices.find((c) => String(c).toLowerCase() === String(answer.choice).toLowerCase())
 const button = matched !== undefined
-const own = input.asker !== "" && String(who.email || "").toLowerCase() === input.asker.toLowerCase()
+const own = input.asker !== "" && (String(who.email || "").toLowerCase() === input.asker.toLowerCase() || answer.service + ":" + answer.user === input.asker)
 const scoped = (who.scopes || []).includes(input.approvers)
 let tell = ""
 if (button && own) tell = "You asked for this, so someone else must answer it."

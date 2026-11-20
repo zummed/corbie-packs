@@ -2,7 +2,8 @@
 # machine may. It calls the service's chat/show at `show` to post `text` in
 # `in` with a choice for each of `choices`, and waits. A press counts when the
 # presser's scopes, as the lookup at `lookup` gives them, hold `approvers`,
-# and the presser's email is not `asker`. Anyone else who presses is told why,
+# and `asker` is neither the presser's email nor their ID on the service, as
+# telegram:123456789. Anyone else who presses is told why,
 # and the question stays. The first press that counts closes the question and
 # ends it with { choice, by }, `by` being the presser's name. With no press
 # that counts within `within`, by default a week, it ends with { choice: no }.

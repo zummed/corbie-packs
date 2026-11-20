@@ -321,16 +321,17 @@ func TestQuestionUnansweredWithinIsNo(t *testing.T) {
 	}
 }
 
-// A question refuses the asker's own press only when it names the asker: with
-// asker, alice's press is refused and she is told so; with none, it counts.
+// A question refuses the asker's own press only when it names the asker, by
+// email or by their ID on the service: alice's press is then refused and she
+// is told so. With none, or with her ID on another service, it counts.
 func TestQuestionRefusesTheAskerOnlyWhenNamed(t *testing.T) {
-	for _, named := range []bool{true, false} {
-		t.Run(fmt.Sprint("named ", named), func(t *testing.T) {
+	for who, named := range map[string]bool{"ALICE@example.com": true, "telegram:1": true, "slack:1": false, "": false} {
+		t.Run(fmt.Sprint("asker ", who), func(t *testing.T) {
 			w := newWorld(t)
 			dir := approvalProject(t, w, noModel)
 			by := ""
-			if named {
-				by = `, asker: ALICE@example.com`
+			if who != "" {
+				by = `, asker: "` + who + `"`
 			}
 			write(t, dir, map[string]string{"on/asker.yaml": asker("telegram", `{ in: "1", text: "Deploy?", choices: [yes, no], approvers: "messages:approve"`+by+` }`)})
 			receiveFrom(t, dir, "telegram", "on/*")

@@ -391,7 +391,7 @@ gives `{ choice, by }`.
 1. It makes its key, 12 random letters and digits, and sends `open` to the run of `answers` at that key.
 2. It calls the service's `chat/show` to post `text` in `in` with a button for each of `choices`, each holding the key.
 3. For each press its router sends to `answers` at that key, it runs `.packs/shared/press.yaml`, which calls the lookup for the presser. A choice is matched in any case.
-4. A press from someone whose scopes lack `approvers`, or whose email is `asker`, is refused. `chat/show` tells the presser why, and the buttons stay.
+4. A press from someone whose scopes lack `approvers`, or whose email or `<service>:<ID>` is `asker`, is refused. `chat/show` tells the presser why, and the buttons stay.
 5. The first press that counts ends it with `{ choice, by }`, and `chat/show` shows who answered in place of the buttons. With none within `within`, by default 7d, it ends with `{ choice: no }`.
 
 A button holds the key, and not the question's run ID, which grows with the
@@ -435,7 +435,7 @@ with its length. It gives `{ approved, note }`.
   ask         the places, each { at, in }: the question's location, such as grouse/slack/chat/ask, and where it is posted there: a channel, a thread or a chat
   approvers   the scope a press needs to count
   within      how long it waits; 7d by default, and no press in time is no
-  asker       the email of the person who asked, shown in the question, whose own press is refused; left out, they may approve their own request
+  asker       the email of the person who asked, or `<service>:<their ID>`, shown in the question, whose own press is refused; left out, they may approve their own request
   request     what was asked, shown quoted
   by          by a tool's or a toolkit's name, its own ask, approvers or within; tools of one name in two toolkits share an entry
 
@@ -585,7 +585,7 @@ What Rook does not defend against
 - Slack gives the email of a person from another organisation in a Slack Connect channel as that organisation set it.
 - GitLab gives a person's public email, which they choose on their account, unless the token is an administrator's. A GitLab that does not confirm emails lets a person show someone else's.
 - Jira gives an email only where the person's privacy settings show it. Without one, the person's row is `jira:<their account ID>`.
-- The question refuses an asker's own press by email. When the lookup gives no email for the asker or the presser, a person's own press is not refused.
+- The question refuses an asker's own press by the email or the `<service>:<ID>` given as `asker`. A person asked for by ID who presses on another service, or one asked for by an email the lookup does not give for the presser, is not refused.
 - Rook's GitLab listener assumes that a change of labels or milestone moves the issue's `updated_at`, which GitLab's documentation does not say and which is not yet checked. If it does not, the change is heard only with the issue's next other change.
 - A person who sends more than 100 messages during one turn loses the rest.
 - Anyone who can change the directory can change every rule above but the first. Guard it by review in git.
