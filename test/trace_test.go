@@ -57,11 +57,11 @@ func traceHelper(address, system string) map[string]string {
 	return map[string]string{
 		"agents/assistant.yaml": `
 			agent: assistant
-			include: .rook/agent.yaml
+			include: .packs/bot/agent.yaml
 			model: { name: test-model, service: anthropic, address: "` + address + `", secret: TEST_KEY }
 			system: ` + system + `
 			ask:
-			  machine: .rook/approval.yaml
+			  machine: .packs/bot/approval.yaml
 			  input: { ask: [{ at: grouse/telegram/chat/ask, in: "1" }], approvers: "messages:approve" }
 			toolkits:
 			  messages: { include: toolkits/messages/toolkit.yaml }
@@ -105,7 +105,7 @@ func traceProject(t *testing.T, w *world, messages ...map[string]any) (string, *
 	dir := copyStarter(t)
 	model, address := toolModel(t, "done: told bob", openClockTell()...)
 	files := traceHelper(address, "You help alice.")
-	files[".rook/telegram/telegram.js"] = heard(messages...)
+	files[".packs/telegram/telegram.js"] = heard(messages...)
 	files["people/find.yaml"] = telegramFind
 	write(t, dir, files)
 	return dir, model
@@ -352,8 +352,8 @@ func TestNoModelFlowAgentIsFollowed(t *testing.T) {
 	w := newWorld(t)
 	dir := copyStarter(t)
 	write(t, dir, map[string]string{
-		".rook/telegram/telegram.js": heard(from("2", "deploy now", 12)),
-		"people/find.yaml":           telegramFind,
+		".packs/telegram/telegram.js": heard(from("2", "deploy now", 12)),
+		"people/find.yaml":            telegramFind,
 		"agents/assistant.yaml": `
 			flow: desk
 			input: { messages: list, medium: string, format: "any?", asker: map, thread: "any?", attachments: "any?", conversation: "any?" }
@@ -448,7 +448,7 @@ func TestDeletedAgentWhileQuestionWaits(t *testing.T) {
 	w := newWorld(t)
 	dir := copyStarter(t)
 	write(t, dir, map[string]string{
-		".rook/telegram/telegram.js": heard(from("2", "deploy now", 12)),
+		".packs/telegram/telegram.js": heard(from("2", "deploy now", 12)),
 		"agents/assistant.yaml": `
 			flow: desk
 			input: { messages: list, medium: string, format: "any?", asker: map, thread: "any?", attachments: "any?", conversation: "any?" }
@@ -620,7 +620,7 @@ func TestMissingModelSecretIsNamed(t *testing.T) {
 	dir := copyStarter(t)
 	_, address := toolModel(t, "hi", openClockTell()...)
 	files := traceHelper(address, "You help alice.")
-	files[".rook/telegram/telegram.js"] = heard(from("1", "hello", 10))
+	files[".packs/telegram/telegram.js"] = heard(from("1", "hello", 10))
 	write(t, dir, files)
 	receipt := w.syncAt(w.Client, dir, project)
 	if !strings.Contains(fmt.Sprint(receipt.Tree.Missing), "TEST_KEY") {

@@ -16,7 +16,7 @@ initial: listening
 states:
   listening:
     job:
-      machine: .rook/gitlab/listen.yaml
+      machine: .packs/gitlab/listen.yaml
       input: { projects: [group/orders] }
       restart: { after: always }
     on:

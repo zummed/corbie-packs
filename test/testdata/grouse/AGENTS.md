@@ -1,9 +1,9 @@
 # This project
 
-This is a Rook project. Read `.rook/AGENTS.md` before changing it:
-`corbie rook init` writes that file, and it says how to change the project.
+This is a Rook project. Read `.packs/bot/AGENTS.md` before changing it:
+`corbie add` writes that file, and it says how to change the project.
 
-@.rook/AGENTS.md
+@.packs/bot/AGENTS.md
 
 ## Notes
 

@@ -1,3 +1,0 @@
-# The Jira part of Rook's question, which only the question calls.
-include: .rook/jira/chat/show.yaml
-receive: [BOT/jira/chat/ask]

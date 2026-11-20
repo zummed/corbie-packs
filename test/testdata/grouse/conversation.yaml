@@ -43,7 +43,7 @@ states:
   adding:
     defer: [message, stop]
     job:
-      script: .rook/shared/fold.js
+      script: .packs/shared/fold.js
       input:
         list: "${event.name === 'message' ? states.adding.output || [] : []}"
         add: "${event.name === 'message' ? [event.data] : []}"
@@ -53,7 +53,7 @@ states:
   # to adding, before this job's end.
   gathering:
     defer: [stop]
-    job: { script: .rook/shared/gathered.js, restart: { after: failure, limit: 3 } }
+    job: { script: .packs/shared/gathered.js, restart: { after: failure, limit: 3 } }
     on:
       message: adding
       done:
@@ -84,11 +84,11 @@ states:
               input: { service: "${input.messages[0].service}", user: "${input.messages[0].user}", name: "${input.messages[0].name || ''}", email: "${input.messages[0].email || ''}" }
           thread:
             job:
-              script: .rook/shared/history.js
-              files: [.rook/shared/thread.js]
+              script: .packs/shared/history.js
+              files: [.packs/shared/thread.js]
               input: { history: "${input.messages[0].history || null}" }
           format:
-            job: { script: .rook/shared/format.js, input: { service: "${input.messages[0].service}" } }
+            job: { script: .packs/shared/format.js, input: { service: "${input.messages[0].service}" } }
           slack_status:
             when: "${input.messages[0].service === 'slack' && input.messages[0].chat.includes('/')}"
             job: { call: { at: grouse/slack/assistant/status }, input: { in: "${input.messages[0].chat}", text: Working on it. } }

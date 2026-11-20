@@ -988,7 +988,7 @@ func TestGitLabRequestApprovedOnSlack(t *testing.T) {
 	write(t, dir, map[string]string{
 		// The agent's ask is a yes on Slack, in alice's direct message, from
 		// someone who holds messages:approve.
-		"agents/assistant.yaml":       modelAgent("assistant", url, "ask:\n  machine: .rook/approval.yaml\n  input: { ask: [{ at: grouse/slack/chat/ask, in: U1 }], approvers: \"messages:approve\", request: \"${input.messages.map((m) => m.text).join('\\\\n')}\" }\ntoolkits:\n  slack: { include: toolkits/slack/toolkit.yaml }\n"),
+		"agents/assistant.yaml":       modelAgent("assistant", url, "ask:\n  machine: .packs/bot/approval.yaml\n  input: { ask: [{ at: grouse/slack/chat/ask, in: U1 }], approvers: \"messages:approve\", request: \"${input.messages.map((m) => m.text).join('\\\\n')}\" }\ntoolkits:\n  slack: { include: toolkits/slack/toolkit.yaml }\n"),
 		"toolkits/slack/toolkit.yaml": slackApprovedToolkit,
 		".corbieignore":               ignoring(t, "slack"),
 	})
@@ -1067,7 +1067,7 @@ func TestQuestionOnAFailingServiceFailsWithItsError(t *testing.T) {
 	w := newWorld(t)
 	dir := copyStarter(t)
 	write(t, dir, map[string]string{
-		".rook/telegram/telegram.js": `if (input.do === "ask") throw new Error("Telegram is down")
+		".packs/telegram/telegram.js": `if (input.do === "ask") throw new Error("Telegram is down")
 			return {}`,
 		"agents/asker.yaml": telegramAsker,
 	})

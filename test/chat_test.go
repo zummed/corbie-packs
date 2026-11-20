@@ -34,7 +34,7 @@ const scenarioPeople = `
 // it finds the email of each of the stand-in's people by their Telegram ID,
 // and then reads people/scopes.yaml as Rook's lookup does.
 const telegramFind = `
-	include: .rook/people/file.yaml
+	include: .packs/bot/people/file.yaml
 	stages:
 	  find:
 	    job:
@@ -71,7 +71,7 @@ func echoAgent(name string) string { return strings.ReplaceAll(echoFlow, "NAME",
 // the toolkits extra gives.
 func modelAgent(name, address, extra string) string {
 	return "agent: " + name + "\n" +
-		"include: .rook/agent.yaml\n" +
+		"include: .packs/bot/agent.yaml\n" +
 		"model: { name: test-model, service: anthropic, address: " + address + ", secret: TEST_KEY }\n" +
 		"system: You help.\n" + extra
 }
@@ -327,7 +327,7 @@ func houseModel(c llmstandin.Call) llmstandin.Reply {
 // houseAsk is the ask of an agent with the toolkit house: a yes from someone
 // with house:approve in alice's chat. It names no asker, so alice may approve
 // what she asked for.
-const houseAsk = "ask:\n  machine: .rook/approval.yaml\n  input: { ask: [{ at: grouse/telegram/chat/ask, in: \"1\" }], approvers: \"house:approve\", request: \"${input.messages.map((m) => m.text).join('\\\\n')}\" }\n"
+const houseAsk = "ask:\n  machine: .packs/bot/approval.yaml\n  input: { ask: [{ at: grouse/telegram/chat/ask, in: \"1\" }], approvers: \"house:approve\", request: \"${input.messages.map((m) => m.text).join('\\\\n')}\" }\n"
 
 // houseProject makes a project whose agent at agents/assistant may open the
 // toolkit house, for a person with the scope house, and asks the stand-in
@@ -854,6 +854,7 @@ func TestPageDeploys(t *testing.T) {
 	gl := newGitLab(t)
 	w := newWorld(t)
 	dir := slackProject(t, w, s)
+	packOnly(t, dir, "gitlab")
 	point(t, dir, "gitlab", gl.Server)
 	w.secret("GITLAB_TOKEN", "gl-token")
 	w.value("GITLAB_SITE", strings.TrimPrefix(gl.URL, "http://"))
@@ -930,6 +931,7 @@ func TestPageToolkitAndAgent(t *testing.T) {
 		return llmstandin.Reply{Text: "It is size 2."}
 	})
 	dir := chatProject(t, w, tg, nil)
+	packOnly(t, dir, "gitlab")
 	point(t, dir, "gitlab", gl.Server)
 	gl.repo["group/orders@HEAD:config/app.yaml"] = "size: 2\n"
 	w.secret("GITLAB_TOKEN", "gl-token")

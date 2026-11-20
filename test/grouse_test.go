@@ -141,7 +141,7 @@ func newGrouse(t *testing.T, script map[string][]llmstandin.Reply, edit func(dir
 }
 
 // grouseCopy copies testdata/grouse to a directory named project, and runs
-// init in it, which writes .rook/.
+// init in it, which writes .packs/bot/.
 func grouseCopy(t *testing.T) string {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), "project")
@@ -962,7 +962,7 @@ toolkits:
 	}
 }
 
-// init on an empty directory, then on it again, lists .rook/ once in
+// init on an empty directory, then on it again, lists .packs/bot/ once in
 // .corbieignore. init on grouse changes none of its files, and names those
 // that differ from the starting files: the ones the project changed.
 func TestGrouseInitKeepsTheProject(t *testing.T) {
@@ -976,8 +976,8 @@ func TestGrouseInitKeepsTheProject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if n := strings.Count("\n"+string(text), "\n.rook/\n"); n != 1 {
-		t.Errorf(".corbieignore lists .rook/ %d times:\n%s", n, text)
+	if n := strings.Count("\n"+string(text), "\n.packs/\n"); n != 1 {
+		t.Errorf(".corbieignore lists .packs/bot/ %d times:\n%s", n, text)
 	}
 
 	dir := grouseCopy(t)
@@ -994,9 +994,9 @@ func TestGrouseInitKeepsTheProject(t *testing.T) {
 		}
 	}
 	if original := projectFiles(t, "testdata/grouse"); !maps.Equal(original, after) {
-		t.Errorf("init wrote other files than .rook/: %v", slices.Sorted(maps.Keys(after)))
+		t.Errorf("init wrote other files than .packs/bot/: %v", slices.Sorted(maps.Keys(after)))
 	}
-	differ, err := rook.Differ(dir)
+	differ, err := rook.Differ(dir, bot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1006,7 +1006,7 @@ func TestGrouseInitKeepsTheProject(t *testing.T) {
 	}
 }
 
-// projectFiles gives the text of each file of a project outside .rook/, by
+// projectFiles gives the text of each file of a project outside .packs/bot/, by
 // its path.
 func projectFiles(t *testing.T, dir string) map[string]string {
 	t.Helper()

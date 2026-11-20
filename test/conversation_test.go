@@ -307,7 +307,7 @@ func TestStrangerHasNoScopes(t *testing.T) {
 // A project with two conversations, conversation.yaml and a copy at
 // deploys.yaml, has its router choose by the words: a message about a deploy
 // goes to deploys, any other to the conversation. Both call agents/assistant,
-// which includes .rook/agent.yaml and writes its own receive: naming both, so
+// which includes .packs/bot/agent.yaml and writes its own receive: naming both, so
 // each is answered by the model.
 func TestRouterChoosesAConversationByWords(t *testing.T) {
 	w := newWorld(t)
@@ -319,8 +319,8 @@ func TestRouterChoosesAConversationByWords(t *testing.T) {
 	})
 	dir := copyStarter(t)
 	write(t, dir, map[string]string{
-		".rook/telegram/telegram.js": heard(from("1", "please deploy the site", 10), from("1", "how are you", 11)),
-		"agents/assistant.yaml":      modelAgent("assistant", address, "receive: [conversation, deploys]\n"),
+		".packs/telegram/telegram.js": heard(from("1", "please deploy the site", 10), from("1", "how are you", 11)),
+		"agents/assistant.yaml":       modelAgent("assistant", address, "receive: [conversation, deploys]\n"),
 	})
 	conversation := readFile(t, dir, "conversation.yaml")
 	write(t, dir, map[string]string{"deploys.yaml": strings.ReplaceAll(conversation, "statechart: conversation", "statechart: deploys")})

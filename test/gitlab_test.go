@@ -700,13 +700,13 @@ func TestGitLabTakesOnlyTheIssuesOwnFiles(t *testing.T) {
 
 // placedCalls places GitLab's calls that the starting files do not.
 var placedCalls = map[string]string{
-	"grouse/gitlab/issues/read.yaml":               "include: .rook/gitlab/issues/read.yaml",
-	"grouse/gitlab/issues/notes/create.yaml":       "include: .rook/gitlab/issues/notes/create.yaml",
-	"grouse/gitlab/issues/notes/list.yaml":         "include: .rook/gitlab/issues/notes/list.yaml",
-	"grouse/gitlab/uploads/create.yaml":            "include: .rook/gitlab/uploads/create.yaml",
-	"grouse/gitlab/repository/files/read.yaml":     "include: .rook/gitlab/repository/files/read.yaml",
-	"grouse/gitlab/repository/commits/create.yaml": "include: .rook/gitlab/repository/commits/create.yaml",
-	"grouse/gitlab/pipeline/create.yaml":           "include: .rook/gitlab/pipeline/create.yaml",
+	"grouse/gitlab/issues/read.yaml":               "include: .packs/gitlab/issues/read.yaml",
+	"grouse/gitlab/issues/notes/create.yaml":       "include: .packs/gitlab/issues/notes/create.yaml",
+	"grouse/gitlab/issues/notes/list.yaml":         "include: .packs/gitlab/issues/notes/list.yaml",
+	"grouse/gitlab/uploads/create.yaml":            "include: .packs/gitlab/uploads/create.yaml",
+	"grouse/gitlab/repository/files/read.yaml":     "include: .packs/gitlab/repository/files/read.yaml",
+	"grouse/gitlab/repository/commits/create.yaml": "include: .packs/gitlab/repository/commits/create.yaml",
+	"grouse/gitlab/pipeline/create.yaml":           "include: .packs/gitlab/pipeline/create.yaml",
 }
 
 // Each GitLab call, placed with one line, does what its description says

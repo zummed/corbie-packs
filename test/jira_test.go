@@ -497,7 +497,7 @@ func TestJiraAttachedFileIsShownInAComment(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			j := newJira(t)
 			j.stored = c.stored
-			w, dir := jiraWorld(t, j, map[string]string{bot + "/jira/issue/attachments/create.yaml": "include: .rook/jira/issue/attachments/create.yaml"})
+			w, dir := jiraWorld(t, j, map[string]string{bot + "/jira/issue/attachments/create.yaml": "include: .packs/jira/issue/attachments/create.yaml"})
 			w.sync(dir)
 			id := w.start(bot+"/jira/issue/attachments/create.yaml", map[string]any{"issue": "OPS-12", "name": c.name, "file": client.InputFile{Name: c.name, Contents: strings.NewReader(c.contents)}})
 			if out := ended(w, id); out.(map[string]any)["sent"] != "comment:77" {
@@ -518,7 +518,7 @@ func TestJiraAttachedFileIsShownInAComment(t *testing.T) {
 func TestJiraRefusedFileIsNotNamed(t *testing.T) {
 	j := newJira(t)
 	j.largest = 4
-	w, dir := jiraWorld(t, j, map[string]string{bot + "/jira/issue/attachments/create.yaml": "include: .rook/jira/issue/attachments/create.yaml"})
+	w, dir := jiraWorld(t, j, map[string]string{bot + "/jira/issue/attachments/create.yaml": "include: .packs/jira/issue/attachments/create.yaml"})
 	w.sync(dir)
 	id := w.start(bot+"/jira/issue/attachments/create.yaml", map[string]any{"issue": "OPS-12", "name": "report.csv", "file": client.InputFile{Name: "report.csv", Contents: strings.NewReader("a,b\n1,2\n")}})
 	w.until("the call to fail", func() bool { return w.show(id).Status == "failed" })
@@ -539,7 +539,7 @@ func TestJiraCommentListReadsTheIssue(t *testing.T) {
 	j.comment("2", "acc-bot", "my reply", at)
 	j.comment("3", "acc-1", "a restricted word", at)
 	j.comments[2]["visibility"] = map[string]any{"type": "role", "value": "Administrators"}
-	w, dir := jiraWorld(t, j, map[string]string{bot + "/jira/issue/comment/list.yaml": "include: .rook/jira/issue/comment/list.yaml"})
+	w, dir := jiraWorld(t, j, map[string]string{bot + "/jira/issue/comment/list.yaml": "include: .packs/jira/issue/comment/list.yaml"})
 	w.sync(dir)
 	out := ended(w, w.start(bot+"/jira/issue/comment/list.yaml", map[string]any{"issue": "OPS-12"})).(map[string]any)
 	if want := "Al: Broken\n\nIt fails.\n\nacc-1: an earlier word\n\nyou: my reply"; out["text"] != want || out["complete"] != true {
@@ -640,7 +640,7 @@ func approvingOnJira(t *testing.T, j *jira, in, within string) (*world, string) 
 	j.people["acc-a"] = map[string]any{"accountId": "acc-a", "displayName": "Alice A.", "emailAddress": "Alice@Example.com"}
 	j.people["acc-b"] = map[string]any{"accountId": "acc-b", "displayName": "Bob B.", "emailAddress": "bob@example.com"}
 	j.mu.Unlock()
-	w, dir := jiraWorld(t, j, map[string]string{"agents/approve.yaml": "include: .rook/approval.yaml"})
+	w, dir := jiraWorld(t, j, map[string]string{"agents/approve.yaml": "include: .packs/bot/approval.yaml"})
 	w.sync(dir)
 	w.kept(router("jira"))
 	tick(w, j.asked)

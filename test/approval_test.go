@@ -55,7 +55,7 @@ func approvalProject(t *testing.T, w *world, address string) string {
 	removeListener(t, dir)
 	realAgent(t, dir, address)
 	write(t, dir, byTelegramID)
-	write(t, dir, map[string]string{".rook/telegram/telegram.js": heard()})
+	write(t, dir, map[string]string{".packs/telegram/telegram.js": heard()})
 	return dir
 }
 
@@ -241,7 +241,7 @@ func TestApprovedToolFails(t *testing.T) {
 	w := newWorld(t)
 	model, address := toolModel(t, "done", tellCarol()...)
 	dir := approvalProject(t, w, address)
-	write(t, dir, map[string]string{".rook/telegram/telegram.js": strings.Replace(heard(), `return { sent: [input.answers || ""] }`, `throw new Error("chat 3 is gone")`, 1)})
+	write(t, dir, map[string]string{".packs/telegram/telegram.js": strings.Replace(heard(), `return { sent: [input.answers || ""] }`, `throw new Error("chat 3 is gone")`, 1)})
 	w.sync(dir)
 	agent := w.start("agents/assistant.yaml", asking("tell carol hello"))
 	w.press(w.question(map[string]bool{}).ID, "1", "yes")
@@ -408,7 +408,7 @@ func TestStatechartAsksForApproval(t *testing.T) {
 			lifetime: keyed
 			allow: [send:ops/pipeline]
 			ask:
-			  machine: .rook/approval.yaml
+			  machine: .packs/bot/approval.yaml
 			  input: { ask: [{ at: grouse/telegram/chat/ask, in: "1" }], approvers: "messages:approve", within: 1h, asker: "${input.email}", request: "${input.text}" }
 			initial: waiting
 			states:
@@ -459,7 +459,7 @@ func TestStatechartAsksForApproval(t *testing.T) {
 func TestApprovalQuestionIsShort(t *testing.T) {
 	w := newWorld(t)
 	dir := approvalProject(t, w, noModel)
-	write(t, dir, map[string]string{"agents/approve.yaml": "include: .rook/approval.yaml"})
+	write(t, dir, map[string]string{"agents/approve.yaml": "include: .packs/bot/approval.yaml"})
 	w.sync(dir)
 	w.start("agents/approve.yaml", map[string]any{
 		"asking": map[string]any{"machine": "deploys"},
@@ -485,8 +485,8 @@ func TestApprovalFromAChatGetsToTheApprover(t *testing.T) {
 	_, address := toolModel(t, "told", tellCarol()...)
 	dir := approvalProject(t, w, address)
 	write(t, dir, map[string]string{
-		router("telegram"):           rook.Starting(bot)[router("telegram")],
-		".rook/telegram/telegram.js": heard(map[string]any{"service": "telegram", "place": "dm", "chat": "2", "user": "2", "name": "Bob", "text": "tell carol hello", "answers": "2:10"}),
+		router("telegram"):            rook.Starting(bot)[router("telegram")],
+		".packs/telegram/telegram.js": heard(map[string]any{"service": "telegram", "place": "dm", "chat": "2", "user": "2", "name": "Bob", "text": "tell carol hello", "answers": "2:10"}),
 	})
 	w.sync(dir)
 	w.kept(router("telegram"))
@@ -647,9 +647,9 @@ func TestApprovalFitsTheQuestion(t *testing.T) {
 		}
 		return m
 	}
-	approval := read("../rook/shipped/approval.yaml")
+	approval := read("../bot/approval.yaml")
 	given := approval["stages"].(map[string]any)["question"].(map[string]any)["job"].(map[string]any)["input"].(map[string]any)["question"].(map[string]any)
-	question := read("../rook/shipped/chat/ask.yaml")
+	question := read("../bot/chat/ask.yaml")
 	input := question["input"].(map[string]any)
 	properties := input["properties"].(map[string]any)
 	for _, field := range input["required"].([]any) {
@@ -684,7 +684,7 @@ func TestApprovalFitsTheQuestion(t *testing.T) {
 	if len(calls) != 5 {
 		t.Fatalf("the question calls chat/show %d times", len(calls))
 	}
-	shows, _ := filepath.Glob("../rook/shipped/*/chat/show.yaml")
+	shows, _ := filepath.Glob("../*/chat/show.yaml")
 	if len(shows) != len(rook.Services()) {
 		t.Fatalf("Rook ships chat/show only at %v", shows)
 	}
@@ -706,7 +706,7 @@ func TestApprovalFitsTheQuestion(t *testing.T) {
 func TestApprovalQuestionCutsALongLine(t *testing.T) {
 	w := newWorld(t)
 	dir := approvalProject(t, w, noModel)
-	write(t, dir, map[string]string{"agents/approve.yaml": "include: .rook/approval.yaml"})
+	write(t, dir, map[string]string{"agents/approve.yaml": "include: .packs/bot/approval.yaml"})
 	w.sync(dir)
 	link := "https://example.com/get?" + strings.Repeat("x", 976)
 	lines := strings.Repeat("a line of a diff\n", 30)
@@ -762,7 +762,7 @@ func TestTelegramQuestionFitsTelegram(t *testing.T) {
 // once, and gives the approval's run.
 func twoPlaces(w *world, dir, a, b string) string {
 	w.t.Helper()
-	write(w.t, dir, map[string]string{"agents/approve.yaml": "include: .rook/approval.yaml"})
+	write(w.t, dir, map[string]string{"agents/approve.yaml": "include: .packs/bot/approval.yaml"})
 	w.sync(dir)
 	ask := func(in string) map[string]any { return map[string]any{"at": bot + "/telegram/chat/ask", "in": in} }
 	return w.start("agents/approve.yaml", map[string]any{
@@ -855,7 +855,7 @@ func TestApprovalInTwoPlacesIgnoresAPressThatDoesNotCount(t *testing.T) {
 func TestApprovalAsksByToolkitOrTool(t *testing.T) {
 	w := newWorld(t)
 	dir := approvalProject(t, w, noModel)
-	write(t, dir, map[string]string{"agents/approve.yaml": "include: .rook/approval.yaml"})
+	write(t, dir, map[string]string{"agents/approve.yaml": "include: .packs/bot/approval.yaml"})
 	w.sync(dir)
 	place := func(in string) []any { return []any{map[string]any{"at": bot + "/telegram/chat/ask", "in": in}} }
 	id := w.start("agents/approve.yaml", map[string]any{
@@ -895,7 +895,7 @@ func TestApprovalAsksByToolkitOrTool(t *testing.T) {
 func TestApprovalByRefusesWhatItCannotAsk(t *testing.T) {
 	w := newWorld(t)
 	dir := approvalProject(t, w, noModel)
-	write(t, dir, map[string]string{"agents/approve.yaml": "include: .rook/approval.yaml"})
+	write(t, dir, map[string]string{"agents/approve.yaml": "include: .packs/bot/approval.yaml"})
 	w.sync(dir)
 	restart := []any{map[string]any{"name": "restart", "asked": map[string]any{"tool": "restart", "toolkit": "infra"}}}
 	for by, want := range map[string]string{
@@ -919,7 +919,7 @@ func TestApprovalByRefusesWhatItCannotAsk(t *testing.T) {
 func TestApprovalPlaceThatFailsLeavesTheOthersAsking(t *testing.T) {
 	w := newWorld(t)
 	dir := approvalProject(t, w, noModel)
-	write(t, dir, map[string]string{".rook/telegram/telegram.js": `if (input.do === "ask" && input.in === "9") throw new Error("chat 9 is gone")` + "\n" + heard()})
+	write(t, dir, map[string]string{".packs/telegram/telegram.js": `if (input.do === "ask" && input.in === "9") throw new Error("chat 9 is gone")` + "\n" + heard()})
 	id := twoPlaces(w, dir, "9", "1")
 	question := w.posted("1")
 	w.until("the question in chat 9 to fail", func() bool {
@@ -944,7 +944,7 @@ func TestApprovalPlaceThatFailsLeavesTheOthersAsking(t *testing.T) {
 func TestApprovalNoPlaceAskedIsNo(t *testing.T) {
 	w := newWorld(t)
 	dir := approvalProject(t, w, noModel)
-	write(t, dir, map[string]string{".rook/telegram/telegram.js": `if (input.do === "ask") throw new Error("chat " + input.in + " is gone")` + "\n" + heard()})
+	write(t, dir, map[string]string{".packs/telegram/telegram.js": `if (input.do === "ask") throw new Error("chat " + input.in + " is gone")` + "\n" + heard()})
 	id := twoPlaces(w, dir, "8", "9")
 	w.until("the approval to end", func() bool { return w.show(id).HasEnded() })
 	run := w.show(id)

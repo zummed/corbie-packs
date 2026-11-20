@@ -10,7 +10,6 @@ import (
 
 	rook "github.com/zummed/corbie-rook/rook"
 	"github.com/zummed/corbie/client"
-	"github.com/zummed/corbie/manual"
 )
 
 // examples gives the files a page shows: each block indented four spaces that
@@ -23,7 +22,7 @@ var starts = regexp.MustCompile(`^    # ([\w./-]+\.(?:yaml|js|md)|\.corbieignore
 
 func examples(t *testing.T, page string) []example {
 	t.Helper()
-	text, err := os.ReadFile(filepath.Join("../rook/pages", page+".txt"))
+	text, err := os.ReadFile(filepath.Join("../bot/pages", page+".txt"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,14 +122,11 @@ func TestEveryPageIsWrittenAsCorbiesAre(t *testing.T) {
 		if title, sentence, ok := strings.Cut(first, ": "); !ok || title == "" || !strings.HasSuffix(sentence, ".") || page.Summary != first {
 			t.Errorf("%s begins %q", page.Name, first)
 		}
-		if page.Name != "rook-starter" && !strings.Contains(page.Text, "\nReference\n---------\n") {
+		if !strings.Contains(page.Text, "\nReference\n---------\n") {
 			t.Errorf("%s has no Reference", page.Name)
 		}
 		if strings.Contains(page.Text, "\n## ") || strings.Contains(page.Text, "|---") || strings.Contains(page.Text, "\n```yaml") {
 			t.Errorf("%s holds Markdown", page.Name)
 		}
-	}
-	if !slices.ContainsFunc(rook.Pages(), func(p manual.Page) bool { return p.Name == "rook-starter" }) {
-		t.Fatal("there is no page rook-starter")
 	}
 }

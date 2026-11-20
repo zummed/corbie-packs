@@ -295,7 +295,7 @@ func TestSlackRepliesReadsAThread(t *testing.T) {
 		s.thread = append(s.thread, map[string]any{"ts": fmt.Sprintf("%d.0", 100+i), "user": "U2", "text": fmt.Sprintf("word %d", i)})
 	}
 	write(t, dir, map[string]string{
-		bot + "/slack/conversations/replies.yaml": "include: .rook/slack/conversations/replies.yaml",
+		bot + "/slack/conversations/replies.yaml": "include: .packs/slack/conversations/replies.yaml",
 		"on/read.yaml": `
 			flow: read
 			allow: [send:grouse/slack/conversations/replies]
@@ -483,7 +483,7 @@ func TestSlackOverhearsAChannelAndAThreadItSpokeIn(t *testing.T) {
 	s := newSlack(t)
 	w := newWorld(t)
 	dir := slackProject(t, w, s)
-	setSite(t, dir, router("slack"), "job: { machine: .rook/slack/listen.yaml,", "job: { machine: .rook/slack/listen.yaml, input: { overhear: true },")
+	setSite(t, dir, router("slack"), "job: { machine: .packs/slack/listen.yaml,", "job: { machine: .packs/slack/listen.yaml, input: { overhear: true },")
 	s.thread = []map[string]any{
 		{"ts": "1.0", "user": "U1", "text": "<@UBOT> start"},
 		{"ts": "2.0", "user": "UBOT", "text": "my earlier reply"},

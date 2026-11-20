@@ -14,7 +14,7 @@ allow: [send:conversation, send:deploys, send:answers]
 initial: listening
 states:
   listening:
-    job: { machine: .rook/slack/listen.yaml, restart: { after: always } }
+    job: { machine: .packs/slack/listen.yaml, restart: { after: always } }
     on:
       message:
         - when: "${event.data.place === '#deploys' && !event.data.unaddressed && !event.data.change}"

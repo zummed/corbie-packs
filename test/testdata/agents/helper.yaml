@@ -3,7 +3,7 @@
 # from someone who holds messages:approve and did not ask for it.
 agent: helper
 description: Helps the person who runs this computer.
-include: .rook/agent.yaml
+include: .packs/bot/agent.yaml
 model: { name: test-model, service: anthropic, secret: TEST_KEY }
 system: |
   You help the person who runs this computer. What you write is read on a phone:
@@ -15,7 +15,7 @@ system: |
 
   ${input.format}
 ask:
-  machine: .rook/approval.yaml
+  machine: .packs/bot/approval.yaml
   input:
     ask: [{ at: grouse/telegram/chat/ask, in: "1" }]
     approvers: messages:approve
