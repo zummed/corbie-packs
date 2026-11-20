@@ -4,8 +4,9 @@
 # bot's own comments and the changes. It sends an answer to a question to
 # `answers`, which sends it on to that question. The host is the value
 # GITLAB_SITE and the token the secret GITLAB_TOKEN, set at
-# /<project>/BOT/gitlab. Set the projects the listener reads, or `group:
-# <group's path>` for every project of a group. Add `settle: 2m` to its input
+# /<project>/BOT/gitlab. Give the listener's input `projects:`, a list of
+# projects' paths, or `group: <group's path>` for every project of a group:
+# with neither the listener fails, saying so. Add `settle: 2m` to its input
 # to hear an opened issue once nobody has changed it for two minutes, and
 # `overhear: true` to hear every issue and comment, marked unaddressed, which
 # this router drops. It takes events only from its listener: `receive: []`,
@@ -20,7 +21,7 @@ states:
   listening:
     job:
       machine: .packs/gitlab/listen.yaml
-      input: { projects: [group/project] }
+      input: {}
       restart: { after: always }
     on:
       message:

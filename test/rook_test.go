@@ -336,7 +336,7 @@ func TestAskPersonIsAnsweredByATap(t *testing.T) {
 
 // A project with a bot on every service reads: the routers are singletons
 // that receive from no location, the conversation is keyed, nothing under
-// .rook has a location, and .packs/bot/, people/scopes.yaml and the file of
+// .packs has a location, and .packs/bot/, people/scopes.yaml and the file of
 // testdata's toolkit messages are listed. Every machine Rook
 // ships reads when it is placed, and its two included files read in an agent.
 func TestProjectReads(t *testing.T) {
@@ -404,7 +404,7 @@ func TestProjectReads(t *testing.T) {
 }
 
 // init writes the starting files, the conversation for its bot, and a router
-// and placed calls for each service named, and none for another; .rook holds
+// and placed calls for each service named, and none for another; .packs holds
 // every service's machines.
 func TestInitWritesTheTree(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "project")

@@ -45,9 +45,13 @@ func pointed(t *testing.T, service string, srv *httptest.Server, hosts ...string
 
 // point rewrites the files of one service in a project, in .packs/bot/<service>/
 // and below it, so that its hosts name a stand-in, reached over a plain
-// connection. Nothing else of the service changes.
+// connection. GitLab's router is given the project group/project, since the
+// starting router names none. Nothing else of the service changes.
 func point(t *testing.T, dir, service string, srv *httptest.Server, hosts ...string) {
 	t.Helper()
+	if src, _ := os.ReadFile(filepath.Join(dir, router("gitlab"))); service == "gitlab" && strings.Contains(string(src), "input: {}") {
+		setSite(t, dir, router("gitlab"), "input: {}", "input: { projects: [group/project] }")
+	}
 	addr := strings.TrimPrefix(srv.URL, "http://")
 	err := filepath.WalkDir(filepath.Join(dir, ".packs", service), func(file string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {

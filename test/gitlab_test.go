@@ -592,6 +592,21 @@ func TestGitLabWaitsWhenFewAsksAreLeft(t *testing.T) {
 	}
 }
 
+// The router corbie add writes names no project, and its listener fails
+// saying what to give it, before GitLab is asked for an issue.
+func TestGitLabStartingRouterNamesNoProject(t *testing.T) {
+	gl := newGitLab(t)
+	w := newWorld(t)
+	w.secret("GITLAB_TOKEN", "gl-token")
+	w.value("GITLAB_SITE", strings.TrimPrefix(gl.URL, "http://"))
+	dir := pointed(t, "gitlab", gl.Server)
+	setSite(t, dir, router("gitlab"), "input: { projects: [group/project] }", "input: {}")
+	w.sync(dir)
+	w.until("the listener fails", func() bool {
+		return strings.Contains(strings.Join(failures(w), "\n"), "the GitLab listener reads nothing: give it projects:")
+	})
+}
+
 // A project with no GITLAB_SITE: the listener fails, and its error names the
 // value and where it is looked for. Once it is set, a submit after the router
 // is cancelled starts it again.

@@ -85,8 +85,7 @@ any file, run in the project:
   corbie run submit .      records the files, and starts again what the change says
 
 `corbie test .` names each location a machine calls that the project lacks,
-and still exits 0. In a new project these are the agent, and the calls the
-conversation makes only for a message from a service the project is not on.
+and still exits 0. In a new project this is the agent.
 
     corbie test .
       answers.yaml                        ok
@@ -103,10 +102,6 @@ conversation makes only for a message from a service the project is not on.
       .packs/                             listed
       people/scopes.yaml                  listed
       nothing in the tree is at /my-bot/agents/assistant, named by conversation.yaml states.answering.job.machine.stages.answer.job.call
-      nothing in the tree is at /my-bot/grouse/gitlab/chat/post, named by conversation.yaml states.replying.job.machine.stages.gitlab.job.call
-      nothing in the tree is at /my-bot/grouse/jira/chat/post, named by conversation.yaml states.replying.job.machine.stages.jira.job.call
-      nothing in the tree is at /my-bot/grouse/telegram/chat/post, named by conversation.yaml states.replying.job.machine.stages.telegram.job.call
-      nothing in the tree is at /my-bot/grouse/telegram/chat/status, named by conversation.yaml states.answering.job.machine.stages.telegram_status.job.call
 
 Submit to one Corbie only: a second copy of a router, with the same token,
 takes the first one's messages.
@@ -135,7 +130,7 @@ What a project holds
   conversation.yaml   one run for each person in each thread, and the stages of a turn
   grouse/<service>/   the router of the bot grouse on a service, and the calls it places, each a file of one line
   people/find.yaml    the lookup: who someone is, and their scopes
-  people/scopes.yaml  each person's email, name and scopes, which Rook's lookup reads
+  people/scopes.yaml  each person's name and scopes, under their email or their ID on a service, which Rook's lookup reads
   agents/             the agent at agents/assistant, once you add it
   toolkits/<name>/    a toolkit: toolkit.yaml, its instructions, and the machines written for its tools
   schedules/          machines that run at a time, once you add one
@@ -155,9 +150,9 @@ The conversation calls the agent at `agents/assistant` for each turn, with
 the asker's scopes, which the lookup reads from `people/scopes.yaml`. A
 toolkit the agent includes is offered only to a person whose scopes its
 `when:` names. The example's tools call GitLab, so add its pack first in the
-project, and set its secret and value. The router `corbie add` writes reads
-the project `group/project` until you set the listener's `projects:` or
-`group:` in `grouse/gitlab/grouse.yaml`.
+project, and set its secret and value. In the router `corbie add` writes,
+`grouse/gitlab/grouse.yaml`, give the listener's input `projects:` or
+`group:`: with neither the listener fails, saying so.
 
     corbie add github.com/zummed/corbie-rook/gitlab --set BOT=grouse
       .packs/gitlab  github.com/zummed/corbie-rook/gitlab  <commit>
@@ -178,7 +173,7 @@ the project `group/project` until you set the listener's `projects:` or
 
 To add the agent:
 
-1. Give each person their email, as the service shows it, with their name and scopes, in `people/scopes.yaml`.
+1. Give each person a row in `people/scopes.yaml`, their name and scopes under their email as the service shows it, or under the service and their ID there, as `slack:U0123456789`.
 2. Write `agents/assistant.yaml`, which includes `.packs/bot/agent.yaml` and names its model.
 3. Write each toolkit in its own directory under `toolkits/`, list its file in `.corbieignore`, and place or write each machine its tools call.
 4. Set the model's secret: `corbie client secret set ANTHROPIC_KEY --at /my-bot/agents`.
@@ -231,7 +226,7 @@ To add the agent:
     toolkits/orders/toolkit.yaml
 
 - Ana is offered `orders` with both tools. Di is offered `orders` with `read_file` only, since she lacks `orders:write`, and her press on a question counts, since she holds `orders:approve`.
-- A person `people/scopes.yaml` does not hold is answered by the agent with no toolkit.
+- A person `people/scopes.yaml` does not hold is answered by the agent with no toolkit, and the log of that run of `people/find` names the email and the ID it looked for: `corbie run show <id> --record`.
 - The model is given `instructions:` when it opens the toolkit.
 - A tool written `call:` takes its description and arguments from the machine at its location, without the names its `input:` fixes, so the model never names the project. A schedule, another machine or a client can run that machine without the agent.
 - A line of `.corbieignore` is a path and takes no `*`. A machine in a toolkit's directory has the location its path gives, such as `toolkits/infra/restart`.
@@ -314,8 +309,9 @@ so nothing on the internet connects to this computer.
    SLACK_APP_TOKEN --at /my-bot/grouse/slack`.
 4. Under Install App, install the app, and set its Bot User OAuth Token with
    `corbie client secret set SLACK_TOKEN --at /my-bot/grouse/slack`.
-5. In `people/scopes.yaml`, give each person's email as Slack shows it in
-   their profile, with their name and scopes.
+5. In `people/scopes.yaml`, give each person's name and scopes under their
+   email as Slack shows it in their profile, or under `slack:<their member
+   ID>`.
 6. In each channel the bot should hear, run `/invite @Rook`.
 
     {

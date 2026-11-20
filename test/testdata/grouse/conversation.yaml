@@ -89,12 +89,12 @@ states:
               input: { history: "${input.messages[0].history || null}" }
           format:
             job: { script: .packs/shared/format.js, input: { service: "${input.messages[0].service}" } }
-          slack_status:
-            when: "${input.messages[0].service === 'slack' && input.messages[0].chat.includes('/')}"
-            job: { call: { at: grouse/slack/assistant/status }, input: { in: "${input.messages[0].chat}", text: Working on it. } }
-          telegram_status:
-            when: "${input.messages[0].service === 'telegram'}"
-            job: { call: { at: grouse/telegram/chat/status }, input: { in: "${input.messages[0].chat}", text: Working on it. } }
+          # Slack shows a status in a thread, and Telegram in a chat.
+          status:
+            when: "${input.messages[0].service === 'telegram' || input.messages[0].service === 'slack' && input.messages[0].chat.includes('/')}"
+            job:
+              call: { at: "${'grouse/' + input.messages[0].service + (input.messages[0].service === 'slack' ? '/assistant/status' : '/chat/status')}" }
+              input: { in: "${input.messages[0].chat}", text: Working on it. }
           files:
             when: "${input.messages.some((m) => (m.attachments || []).length > 0)}"
             job:
@@ -129,7 +129,7 @@ states:
         output:
           reply: "${(stages.answer.output || {}).reply}"
           conversation: "${(stages.answer.output || {}).conversation}"
-          status_failed: "${!!(stages.slack_status.failed || stages.telegram_status.failed)}"
+          status_failed: "${!!stages.status.failed}"
     on: { done: replying, failed: replying, stop: replying }
   replying:
     defer: [message]
@@ -152,25 +152,19 @@ states:
         input: { service: string, in: string, answers: string, text: string, conversation: "any?" }
         allow: ["send:grouse/*/chat/post", send:grouse/slack/assistant/status]
         stages:
-          slack_status:
+          status:
             when: "${input.service === 'slack' && input.in.includes('/')}"
-            job: { call: { at: grouse/slack/assistant/status }, input: { in: "${input.in}", text: "" } }
-          slack:
-            when: "${input.service === 'slack' && input.text}"
-            job: { call: { at: grouse/slack/chat/post }, input: { in: "${input.in}", text: "${input.text}" } }
-          telegram:
-            when: "${input.service === 'telegram' && input.text}"
-            job: { call: { at: grouse/telegram/chat/post }, input: { in: "${input.in}", text: "${input.text}", answers: "${input.answers}" } }
-          gitlab:
-            when: "${input.service === 'gitlab' && input.text}"
-            job: { call: { at: grouse/gitlab/chat/post }, input: { in: "${input.in}", text: "${input.text}" } }
-          jira:
-            when: "${input.service === 'jira' && input.text}"
-            job: { call: { at: grouse/jira/chat/post }, input: { in: "${input.in}", text: "${input.text}" } }
+            job: { call: { at: "${'grouse/' + input.service + '/assistant/status'}" }, input: { in: "${input.in}", text: "" } }
+          # Telegram's post takes answers, the message the reply is to.
+          post:
+            when: "${input.text}"
+            job:
+              call: { at: "${'grouse/' + input.service + '/chat/post'}" }
+              input: "${input.service === 'telegram' ? { in: input.in, text: input.text, answers: input.answers } : { in: input.in, text: input.text }}"
         output:
-          conversation: "${stages.slack.failed || stages.telegram.failed || stages.gitlab.failed || stages.jira.failed ? null : input.conversation}"
-          post_failed: "${!!(stages.slack.failed || stages.telegram.failed || stages.gitlab.failed || stages.jira.failed)}"
-          status_failed: "${!!stages.slack_status.failed}"
+          conversation: "${stages.post.failed ? null : input.conversation}"
+          post_failed: "${!!stages.post.failed}"
+          status_failed: "${!!stages.status.failed}"
     on: { done: adding, failed: adding }
   broken: { end: failed }
   over: { end: done }
