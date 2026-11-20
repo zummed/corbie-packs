@@ -1,23 +1,24 @@
 # Rook
 
-Rook is ready-made Corbie machines: the listeners and calls of Telegram, Slack, GitLab and Jira, a lookup, an approval and the question it asks, and the starting files of a project, its routers and conversation among them. The program `corbie-rook` writes them into a project. `corbie run submit` brings a project's runs into line with its files, and `corbie ui` shows them.
+Rook is ready-made Corbie machines: the listeners and calls of Telegram, Slack, GitLab and Jira, a lookup, an approval and the question it asks, and the starting files of a project, its routers and conversation among them. They are packs, one directory each, and Corbie's command `corbie add` writes a pack into a project's `.packs/`. `corbie run submit` brings a project's runs into line with its files, and `corbie ui` shows them.
 
 ## Where to start
 
-- `rook/pages/`: Rook's pages of the manual. `rook-design.txt` is the design, `rook-project.txt` how a person uses it, and `rook.txt` what a model is told when `corbie mcp` allows it `rook init`, which `init` also writes as `.rook/AGENTS.md`. `README.md` is the front page on GitHub.
-- `rook/shipped/`: what is written into a project's `.rook/`. `rook/starter/`: a project's first files, which hold no agent and no toolkit; `BOT` in a path or a text there is the bot's name, and `starter/BOT/<service>/` holds a service's router and placed calls.
-- `rook/rook.go`: what writes them. `cmd/corbie-rook/`: the program.
-- `test/`: the tests. `test/testdata/` holds the agents, toolkit and people the tests add to a project, and `testdata/grouse/`, the worked example as a whole project without `.rook/`, which `grouse_test.go` runs.
+- `bot/`: the pack every project adds: the conversation's machines, the lookup, the approval, the question and what an agent includes. `bot/pages/` holds Rook's pages: `rook-design.txt` is the design, and `rook-project.txt` how a person uses it. `bot/AGENTS.md` is what a model is told. `README.md` is the front page on GitHub.
+- `slack/`, `telegram/`, `gitlab/`, `jira/`: a service's pack, its listener and calls. `shared/`: the pack of scripts the others use, which `corbie add` writes with a pack whose files name `.packs/shared/`.
+- `<pack>/starter/`: a pack's starting files, a project's first files, which hold no agent and no toolkit. `BOT` in a path or a text there is the bot's name, which `corbie add --set BOT=<name>` writes, and `<service>/starter/BOT/<service>/` holds a service's router and placed calls.
+- `rook/rook.go`: what the tests use to make a project from the packs.
+- `test/`: the tests. `test/testdata/` holds the agents, toolkit and people the tests add to a project, and `testdata/grouse/`, the worked example as a whole project without `.packs/`, which `grouse_test.go` runs.
 
 ## What holds
 
-- **Two ideas**: machine and toolkit. Rook ships flows, statecharts and agents, and files an agent includes (`.rook/agent.yaml`, `.rook/filters/model.yaml`). `people/scopes.yaml` is the one table, and only the lookup reads it. Rook ships no file it reads as configuration. Add no other idea a person must learn.
+- **Two ideas**: machine and toolkit. Rook ships flows, statecharts and agents, and files an agent includes (`.packs/bot/agent.yaml`, `.packs/bot/filters/model.yaml`). `people/scopes.yaml` is the one table, and only the lookup reads it. Rook ships no file it reads as configuration. Add no other idea a person must learn.
 - **The project's machines say what happens.** A router routes on a message's fields, and the conversation is the project's own file, with its stages written in it. No location is passed in a message's data.
-- **A message is one mapping**, the same from every service, given in `pages/rook-design.txt`. A listener only translates between its service and that mapping, and a call takes the service's own input or the shared `{ in, text }`.
-- **A project's files hold choices; `.rook/` holds what Rook does.** Rook never updates a project's file, so anything Rook may change goes in `.rook/`. The one exception: `init` adds `.rook/` and `people/scopes.yaml` to `.corbieignore` when it lacks them. The manual page `rook-starter` shows this version's starting files, and `init` names a project's files that differ from them.
+- **A message is one mapping**, the same from every service, given in `bot/pages/rook-design.txt`. A listener only translates between its service and that mapping, and a call takes the service's own input or the shared `{ in, text }`.
+- **A project's files hold choices; `.packs/` holds what Rook does.** `corbie add` never updates a project's file, so anything Rook may change goes in a pack, outside its `starter/`. The one exception: `corbie add` adds `.packs/` to `.corbieignore` when it lacks it. A pack's `starter/` holds this version's starting files, and `corbie add` names a project's files that differ from them.
 - **Nothing personal lives here.** No real name, address, ID or host goes in this repository. A person's own machines live in their own directory.
-- **The program does one thing**: writes machines into a project. Everything else is written in machines, which the person can change.
-- **A person changes nothing in `.rook/`.** Rook rewrites it, and changes no other file.
+- **Rook ships no program.** `corbie add` writes the packs into a project. Everything else is written in machines, which the person can change.
+- **A person changes nothing in `.packs/`.** `corbie add` rewrites a pack's directory there.
 - **Rook holds no secret.** Every service is reached by the service's machines, whose secrets Corbie keeps at `<bot>/<service>`.
 - Corbie stays simple and generic, and gains nothing that serves Rook alone.
 
@@ -95,14 +96,14 @@ Sentences:
 
 Docs say how things are now. No history, no "previously", no alternatives. Something removed is simply gone.
 
-A page of the manual is written as Corbie's are:
+A page of Rook's is written as Corbie's are:
 
 - It answers three things: what the thing is, why a reader wants it, and how to do it.
 - Its first line is `Title: one sentence that says what the page is for.`, which is its summary in the list of pages.
 - It is plain text: a heading is underlined with dashes, a row is indented two spaces, and an example is indented four.
 - It gives the definition first, then a real example: the real files, the real command and the output it printed. `pages_test.go` checks every example file and the printed output.
 - A mechanism is stated first, in three or four numbered one-line steps, before any example.
-- Another page is named as `corbie manual <page>` or `corbie rook manual <page>`. A page ends with a `Reference` list of pages.
+- A page of Corbie's is named as `corbie manual <page>`, and a page of Rook's by its path in a project, as `.packs/bot/pages/rook-design.txt`. A page ends with a `Reference` list of pages.
 - Do not add a page without asking the author. The aim is fewer and shorter pages.
 
 ## Commits

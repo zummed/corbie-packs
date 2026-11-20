@@ -1,30 +1,32 @@
 # Rook
 
-Rook is ready-made [Corbie](https://github.com/zummed/corbie) machines for a bot that answers people on Telegram, Slack, GitLab issues and Jira issues, with agents, toolkits and approvals. `corbie rook init` writes them into a project's `.rook/`, Corbie runs them, and the project's own files say where each message goes, who someone is, and what each agent can do.
+Rook is ready-made [Corbie](https://github.com/zummed/corbie) machines for a bot that answers people on Telegram, Slack, GitLab issues and Jira issues, with agents, toolkits and approvals. Rook is a set of packs, each a directory of this repository. `corbie add` writes a pack into a project's `.packs/`, Corbie runs its machines, and the project's own files say where each message goes, who someone is, and what each agent can do.
+
+| Pack | What it holds |
+|---|---|
+| `bot` | the conversation, the lookup, the approval and the question it asks |
+| `slack`, `telegram`, `gitlab`, `jira` | a service's listener and calls |
+| `shared` | scripts the others use; `corbie add` writes it with them |
 
 ## Start
 
-Install [Corbie](https://github.com/zummed/corbie) and [corbie-ui](https://github.com/zummed/corbie-ui), then Rook:
-
-```sh
-go install github.com/zummed/corbie-rook/cmd/corbie-rook@latest
-```
-
-Make a project, and read its page:
+Install [Corbie](https://github.com/zummed/corbie). Make a project with the pack `bot` and a service's pack, naming the bot, and read its page:
 
 ```sh
 corbie init --ceiling all
-corbie rook init my-bot --bot grouse --services slack
-corbie rook manual rook-project
+mkdir my-bot && cd my-bot
+corbie add github.com/zummed/corbie-rook/bot github.com/zummed/corbie-rook/slack --set BOT=grouse
+less .packs/bot/pages/rook-project.txt
 ```
 
-The manual has three pages of Rook's:
+`corbie add` writes two pages of Rook's into the project:
 
 | Page | What it gives |
 |---|---|
-| `rook-project` | making a project, what to run after a change, and the common changes |
-| `rook-design` | the runs that answer a message, what each machine takes and gives, and who may do what |
-| `rook-starter` | the files this version starts a project with |
+| `.packs/bot/pages/rook-project.txt` | making a project, what to run after a change, and the common changes |
+| `.packs/bot/pages/rook-design.txt` | the runs that answer a message, what each machine takes and gives, and who may do what |
+
+A pack's starting files are under its `starter/` directory, and `corbie add` with no pack named adds a project's packs again from where they came.
 
 `corbie run submit .` in the project records it in Corbie as one tree, `/my-bot`, and starts a router for each service. A router's listener hears a message, and the router sends it to the conversation for that person and thread, which looks the person up and calls the agent with the toolkits their scopes allow. Each run names the run whose send or call started it, so a message can be followed to its agent, tools and approvals.
 

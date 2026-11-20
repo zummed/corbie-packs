@@ -33,5 +33,3 @@ jobs:
           restore-keys: go-
 
       - run: mise run check
-
-      - run: mise run dist
