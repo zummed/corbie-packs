@@ -1,6 +1,0 @@
-# What in this project is no machine: nothing runs at a path listed here, and a
-# machine may still include it. corbie rook init adds .rook/ and
-# people/scopes.yaml when they are missing. List each toolkit's file on its
-# own line, as toolkits/orders/toolkit.yaml.
-.rook/
-people/scopes.yaml

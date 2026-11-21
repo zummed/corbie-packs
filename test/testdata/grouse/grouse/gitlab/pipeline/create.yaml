@@ -1,1 +1,1 @@
-include: .rook/gitlab/pipeline/create.yaml
+include: .packs/gitlab/pipeline/create.yaml

@@ -282,7 +282,7 @@ func TestStopKeepsTheConversation(t *testing.T) {
 // sends to the person's conversation, and is not answered. /stopwatch is a
 // message.
 func TestStopWithABotNameOrWords(t *testing.T) {
-	for _, text := range []string{"/stop@rook_bot", "/stop please", "/stopwatch"} {
+	for _, text := range []string{"/stop@grouse_bot", "/stop please", "/stopwatch"} {
 		t.Run(text, func(t *testing.T) {
 			tg := newTelegram(t)
 			w := newWorld(t)

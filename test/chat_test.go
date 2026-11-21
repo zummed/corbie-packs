@@ -32,9 +32,9 @@ const scenarioPeople = `
 
 // telegramFind is a project's own lookup for Telegram, which gives no email:
 // it finds the email of each of the stand-in's people by their Telegram ID,
-// and then reads people/scopes.yaml as Rook's lookup does.
+// and then reads people/scopes.yaml as the pack's lookup does.
 const telegramFind = `
-	include: .rook/people/file.yaml
+	include: .packs/bot/people/file.yaml
 	stages:
 	  find:
 	    job:
@@ -71,7 +71,7 @@ func echoAgent(name string) string { return strings.ReplaceAll(echoFlow, "NAME",
 // the toolkits extra gives.
 func modelAgent(name, address, extra string) string {
 	return "agent: " + name + "\n" +
-		"include: .rook/agent.yaml\n" +
+		"include: .packs/bot/agent.yaml\n" +
 		"model: { name: test-model, service: anthropic, address: " + address + ", secret: TEST_KEY }\n" +
 		"system: You help.\n" + extra
 }
@@ -176,13 +176,13 @@ func TestSeveralPeopleHaveTheirOwnConversations(t *testing.T) {
 }
 
 // A message in a Telegram group is not heard, even when it names the bot:
-// Telegram's listener hears only direct messages, as rook-design says, and
+// Telegram's listener hears only direct messages, as bot-design says, and
 // logs that. Nothing is said in the group, and no conversation starts for it.
 func TestGroupMessagesAreNotHeard(t *testing.T) {
 	tg := newTelegram(t)
 	w := newWorld(t)
 	dir := chatProject(t, w, tg, nil)
-	tg.group(-100, 1, "@rook_bot hello from the group")
+	tg.group(-100, 1, "@grouse_bot hello from the group")
 	tg.group(-100, 2, "and me")
 	tg.dm(1, "direct")
 	w.sync(dir)
@@ -327,7 +327,7 @@ func houseModel(c llmstandin.Call) llmstandin.Reply {
 // houseAsk is the ask of an agent with the toolkit house: a yes from someone
 // with house:approve in alice's chat. It names no asker, so alice may approve
 // what she asked for.
-const houseAsk = "ask:\n  machine: .rook/approval.yaml\n  input: { ask: [{ at: grouse/telegram/chat/ask, in: \"1\" }], approvers: \"house:approve\", request: \"${input.messages.map((m) => m.text).join('\\\\n')}\" }\n"
+const houseAsk = "ask:\n  machine: .packs/bot/approval.yaml\n  input: { ask: [{ at: grouse/telegram/chat/ask, in: \"1\" }], approvers: \"house:approve\", request: \"${input.messages.map((m) => m.text).join('\\\\n')}\" }\n"
 
 // houseProject makes a project whose agent at agents/assistant may open the
 // toolkit house, for a person with the scope house, and asks the stand-in
@@ -845,7 +845,7 @@ func writeRaw(t *testing.T, dir, name, text string) {
 	}
 }
 
-// rook-design's deploys.yaml, with the placed pipeline call and question, as
+// bot-design's deploys.yaml, with the placed pipeline call and question, as
 // written, on Slack and GitLab's stand-ins: bob asks to deploy orders in a
 // thread, his own press is refused, alice's yes starts the pipeline, and the
 // thread is told it started.
@@ -854,11 +854,12 @@ func TestPageDeploys(t *testing.T) {
 	gl := newGitLab(t)
 	w := newWorld(t)
 	dir := slackProject(t, w, s)
+	packOnly(t, dir, "gitlab")
 	point(t, dir, "gitlab", gl.Server)
 	w.secret("GITLAB_TOKEN", "gl-token")
 	w.value("GITLAB_SITE", strings.TrimPrefix(gl.URL, "http://"))
 	for _, path := range []string{"deploys.yaml", "grouse/gitlab/pipeline/create.yaml", "grouse/slack/chat/ask.yaml"} {
-		writeRaw(t, dir, path, pageExample(t, "rook-design", path))
+		writeRaw(t, dir, path, pageExample(t, "bot-design", path))
 	}
 	write(t, dir, map[string]string{"people/scopes.yaml": `
 		alice@example.com: { name: alice, scopes: ["deploy:approve"] }
@@ -891,13 +892,13 @@ func TestPageDeploys(t *testing.T) {
 	}
 }
 
-// rook-design's schedules/evening.yaml, as written but for the chat's ID: at
+// bot-design's schedules/evening.yaml, as written but for the chat's ID: at
 // 18:00 in London, chat 1 is told the day is over on Telegram.
 func TestPageEveningSchedule(t *testing.T) {
 	tg := newTelegram(t)
 	w := newWorld(t)
 	dir := chatProject(t, w, tg, nil)
-	evening := pageExample(t, "rook-design", "schedules/evening.yaml")
+	evening := pageExample(t, "bot-design", "schedules/evening.yaml")
 	writeRaw(t, dir, "schedules/evening.yaml", strings.Replace(evening, `in: "123456789"`, `in: "1"`, 1))
 	london, err := time.LoadLocation("Europe/London")
 	if err != nil {
@@ -911,7 +912,7 @@ func TestPageEveningSchedule(t *testing.T) {
 	tg.waitFor(w, "1", "The day is over.")
 }
 
-// rook-project's agent, toolkit, its instructions and placed calls, as
+// bot-project's agent, toolkit, its instructions and placed calls, as
 // written but for the model's address: alice, with orders:read only, asks on
 // Telegram; the model opens orders, is given its instructions, is shown
 // read_file without the project it fixes and not change_file, reads the file
@@ -930,17 +931,18 @@ func TestPageToolkitAndAgent(t *testing.T) {
 		return llmstandin.Reply{Text: "It is size 2."}
 	})
 	dir := chatProject(t, w, tg, nil)
+	packOnly(t, dir, "gitlab")
 	point(t, dir, "gitlab", gl.Server)
 	gl.repo["group/orders@HEAD:config/app.yaml"] = "size: 2\n"
 	w.secret("GITLAB_TOKEN", "gl-token")
 	w.value("GITLAB_SITE", strings.TrimPrefix(gl.URL, "http://"))
 	w.secret("ANTHROPIC_KEY", "sk-test")
 	for _, path := range []string{"agents/assistant.yaml", "toolkits/orders/toolkit.yaml", "toolkits/orders/orders.md", "grouse/gitlab/repository/files/read.yaml", "grouse/gitlab/repository/commits/create.yaml"} {
-		writeRaw(t, dir, path, pageExample(t, "rook-project", path))
+		writeRaw(t, dir, path, pageExample(t, "bot-project", path))
 	}
 	// The project holds testdata's toolkit messages too, whose file stays listed.
-	writeRaw(t, dir, ".corbieignore", pageExample(t, "rook-project", ".corbieignore")+"toolkits/messages/toolkit.yaml\n")
-	agent := pageExample(t, "rook-project", "agents/assistant.yaml")
+	writeRaw(t, dir, ".corbieignore", pageExample(t, "bot-project", ".corbieignore")+"toolkits/messages/toolkit.yaml\n")
+	agent := pageExample(t, "bot-project", "agents/assistant.yaml")
 	writeRaw(t, dir, "agents/assistant.yaml", strings.Replace(agent, "model: { name: claude-sonnet-5-5, secret: ANTHROPIC_KEY }", "model: { name: claude-sonnet-5-5, service: anthropic, address: "+address+", secret: ANTHROPIC_KEY }", 1))
 	write(t, dir, map[string]string{"people/scopes.yaml": `alice@example.com: { name: alice, scopes: ["orders:read"] }`})
 	tg.dm(1, "what size is the app?")

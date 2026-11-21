@@ -251,7 +251,7 @@ func TestTelegramFilesSendSendsADocument(t *testing.T) {
 	tg := newTelegram(t)
 	w := newWorld(t)
 	dir := chatProject(t, w, tg, map[string]string{
-		bot + "/telegram/files/send.yaml": "include: .rook/telegram/files/send.yaml\n",
+		bot + "/telegram/files/send.yaml": "include: .packs/telegram/files/send.yaml\n",
 		"agents/sender.yaml": `
 			flow: sender
 			allow: [send:grouse/telegram/files/get, send:grouse/telegram/files/send]
@@ -298,7 +298,7 @@ func slackAgentProject(t *testing.T, w *world, s *slack) (string, *llmstandin.Se
 func uploading(t *testing.T, dir string) {
 	t.Helper()
 	write(t, dir, map[string]string{
-		bot + "/slack/files/upload.yaml": "include: .rook/slack/files/upload.yaml",
+		bot + "/slack/files/upload.yaml": "include: .packs/slack/files/upload.yaml",
 		"on/report.yaml": `
 			flow: report
 			input: { in: string }

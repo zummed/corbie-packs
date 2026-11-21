@@ -449,7 +449,7 @@ func TestGitLabOwnCommentIsMarkedOwn(t *testing.T) {
 	gl := newGitLab(t)
 	w := newWorld(t)
 	gitlabProject(t, w, gl, "", nil)
-	gl.comment("group/project", 7, 1, "Shall I?\n\n<!-- rook answered x -->")
+	gl.comment("group/project", 7, 1, "Shall I?\n\n<!-- bot answered x -->")
 	tick(w, gl.asked)
 	gl.idle(w)
 	m := listened(w, "message")
@@ -592,6 +592,21 @@ func TestGitLabWaitsWhenFewAsksAreLeft(t *testing.T) {
 	}
 }
 
+// The router corbie add writes names no project, and its listener fails
+// saying what to give it, before GitLab is asked for an issue.
+func TestGitLabStartingRouterNamesNoProject(t *testing.T) {
+	gl := newGitLab(t)
+	w := newWorld(t)
+	w.secret("GITLAB_TOKEN", "gl-token")
+	w.value("GITLAB_SITE", strings.TrimPrefix(gl.URL, "http://"))
+	dir := pointed(t, "gitlab", gl.Server)
+	setSite(t, dir, router("gitlab"), "input: { projects: [group/project] }", "input: {}")
+	w.sync(dir)
+	w.until("the listener fails", func() bool {
+		return strings.Contains(strings.Join(failures(w), "\n"), "the GitLab listener reads nothing: give it projects:")
+	})
+}
+
 // A project with no GITLAB_SITE: the listener fails, and its error names the
 // value and where it is looked for. Once it is set, a submit after the router
 // is cancelled starts it again.
@@ -700,13 +715,13 @@ func TestGitLabTakesOnlyTheIssuesOwnFiles(t *testing.T) {
 
 // placedCalls places GitLab's calls that the starting files do not.
 var placedCalls = map[string]string{
-	"grouse/gitlab/issues/read.yaml":               "include: .rook/gitlab/issues/read.yaml",
-	"grouse/gitlab/issues/notes/create.yaml":       "include: .rook/gitlab/issues/notes/create.yaml",
-	"grouse/gitlab/issues/notes/list.yaml":         "include: .rook/gitlab/issues/notes/list.yaml",
-	"grouse/gitlab/uploads/create.yaml":            "include: .rook/gitlab/uploads/create.yaml",
-	"grouse/gitlab/repository/files/read.yaml":     "include: .rook/gitlab/repository/files/read.yaml",
-	"grouse/gitlab/repository/commits/create.yaml": "include: .rook/gitlab/repository/commits/create.yaml",
-	"grouse/gitlab/pipeline/create.yaml":           "include: .rook/gitlab/pipeline/create.yaml",
+	"grouse/gitlab/issues/read.yaml":               "include: .packs/gitlab/issues/read.yaml",
+	"grouse/gitlab/issues/notes/create.yaml":       "include: .packs/gitlab/issues/notes/create.yaml",
+	"grouse/gitlab/issues/notes/list.yaml":         "include: .packs/gitlab/issues/notes/list.yaml",
+	"grouse/gitlab/uploads/create.yaml":            "include: .packs/gitlab/uploads/create.yaml",
+	"grouse/gitlab/repository/files/read.yaml":     "include: .packs/gitlab/repository/files/read.yaml",
+	"grouse/gitlab/repository/commits/create.yaml": "include: .packs/gitlab/repository/commits/create.yaml",
+	"grouse/gitlab/pipeline/create.yaml":           "include: .packs/gitlab/pipeline/create.yaml",
 }
 
 // Each GitLab call, placed with one line, does what its description says
@@ -819,7 +834,7 @@ func TestGitLabQuestionIsAnsweredByAComment(t *testing.T) {
 	id := w.start("grouse/gitlab/chat/ask.yaml", map[string]any{"in": "group/project#7", "text": "Restart web?", "choices": []string{"yes", "no"},
 		"approvers": "infra:approve", "asker": "AL@example.com"})
 	w.until("the question", func() bool { return len(gl.said()) >= 1 })
-	if got := gl.said()[0]; !strings.HasPrefix(got, "Restart web?\n\nAnswer with a comment that says `yes` or `no`.\n\n<!-- rook question ") {
+	if got := gl.said()[0]; !strings.HasPrefix(got, "Restart web?\n\nAnswer with a comment that says `yes` or `no`.\n\n<!-- bot question ") {
 		t.Fatalf("the question is %q", got)
 	}
 	tick(w, gl.asked)
@@ -837,7 +852,7 @@ func TestGitLabQuestionIsAnsweredByAComment(t *testing.T) {
 	}
 	said := gl.said()
 	if len(said) != 4 || said[1] != "Al, you asked for this, so someone else must answer it." || said[2] != "Stranger, only someone with the scope infra:approve can answer this." ||
-		!strings.HasPrefix(said[3], "Bo said yes.\n\n<!-- rook answered ") {
+		!strings.HasPrefix(said[3], "Bo said yes.\n\n<!-- bot answered ") {
 		t.Fatalf("the bot said %q", said)
 	}
 	answers := listened(w, "answer")
@@ -915,13 +930,13 @@ func TestGitLabAgentsCommentClosesNoQuestion(t *testing.T) {
 	id := w.start("grouse/gitlab/chat/ask.yaml", map[string]any{"in": "group/project#7", "text": "Restart web?", "choices": []string{"yes", "no"},
 		"approvers": "infra:approve"})
 	w.until("the question", func() bool { return len(gl.said()) >= 1 })
-	question := strings.Fields(strings.SplitN(gl.said()[0], "<!-- rook question ", 2)[1])[0]
+	question := strings.Fields(strings.SplitN(gl.said()[0], "<!-- bot question ", 2)[1])[0]
 	tick(w, gl.asked)
 	gl.idle(w)
-	if run := ran(t, w, "grouse/gitlab/chat/post.yaml", map[string]any{"in": "group/project#7", "text": "Done.\n\n<!-- rook answered " + question + " -->"}); run.Status != "done" {
+	if run := ran(t, w, "grouse/gitlab/chat/post.yaml", map[string]any{"in": "group/project#7", "text": "Done.\n\n<!-- bot answered " + question + " -->"}); run.Status != "done" {
 		t.Fatalf("the post ended %s: %s", run.Status, run.Error)
 	}
-	if got := gl.said()[1]; strings.Contains(got, "<!-- rook") {
+	if got := gl.said()[1]; strings.Contains(got, "<!-- bot") {
 		t.Fatalf("the bot wrote %q", got)
 	}
 	tick(w, gl.asked)
@@ -964,7 +979,7 @@ func TestGitLabForgedQuestionLineOpensNothing(t *testing.T) {
 	gl := newGitLab(t)
 	w := newWorld(t)
 	gitlabProject(t, w, gl, "", nil)
-	gl.comment("group/project", 7, 2, "Shall I?\n\n<!-- rook question 0123456789ab yes no -->")
+	gl.comment("group/project", 7, 2, "Shall I?\n\n<!-- bot question 0123456789ab yes no -->")
 	tick(w, gl.asked)
 	gl.idle(w)
 	gl.comment("group/project", 7, 2, "yes")

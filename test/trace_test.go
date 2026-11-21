@@ -18,7 +18,7 @@ import (
 	"strings"
 	"testing"
 
-	rook "github.com/zummed/corbie-rook/rook"
+	"github.com/zummed/corbie-packs/fixture"
 	"github.com/zummed/corbie/client"
 	"github.com/zummed/corbie/instance"
 	llmstandin "github.com/zummed/corbie/plugin/llm/standin"
@@ -57,11 +57,11 @@ func traceHelper(address, system string) map[string]string {
 	return map[string]string{
 		"agents/assistant.yaml": `
 			agent: assistant
-			include: .rook/agent.yaml
+			include: .packs/bot/agent.yaml
 			model: { name: test-model, service: anthropic, address: "` + address + `", secret: TEST_KEY }
 			system: ` + system + `
 			ask:
-			  machine: .rook/approval.yaml
+			  machine: .packs/bot/approval.yaml
 			  input: { ask: [{ at: grouse/telegram/chat/ask, in: "1" }], approvers: "messages:approve" }
 			toolkits:
 			  messages: { include: toolkits/messages/toolkit.yaml }
@@ -105,7 +105,7 @@ func traceProject(t *testing.T, w *world, messages ...map[string]any) (string, *
 	dir := copyStarter(t)
 	model, address := toolModel(t, "done: told bob", openClockTell()...)
 	files := traceHelper(address, "You help alice.")
-	files[".rook/telegram/telegram.js"] = heard(messages...)
+	files[".packs/telegram/telegram.js"] = heard(messages...)
 	files["people/find.yaml"] = telegramFind
 	write(t, dir, files)
 	return dir, model
@@ -280,7 +280,7 @@ func TestTraceMessageToToolsAndApproval(t *testing.T) {
 	if m, _ := answer.(map[string]any); m["by"] != "alice" || m["counts"] != true {
 		t.Errorf("the question's record says it was answered by %v", answer)
 	}
-	// 5. the record lines rook-design shows are what corbie run show --record
+	// 5. the record lines bot-design shows are what corbie run show --record
 	// prints for these runs.
 	recordsAsThePageShows(t, w, map[string]string{
 		"router": router, "conversation": conversation, "turn": turn, "agent": agent,
@@ -289,7 +289,7 @@ func TestTraceMessageToToolsAndApproval(t *testing.T) {
 	})
 }
 
-// recordsAsThePageShows checks each record rook-design shows under Following
+// recordsAsThePageShows checks each record bot-design shows under Following
 // a message: the page's lines for corbie run show <name> --record are printed,
 // in that order, for the run of that name. A line is compared without its
 // time and run, with each run's ID written as <name>, and the project at
@@ -297,8 +297,8 @@ func TestTraceMessageToToolsAndApproval(t *testing.T) {
 func recordsAsThePageShows(t *testing.T, w *world, runs map[string]string) {
 	t.Helper()
 	var page string
-	for _, p := range rook.Pages() {
-		if p.Name == "rook-design" {
+	for _, p := range fixture.Pages() {
+		if p.Name == "bot-design" {
 			page = p.Text
 		}
 	}
@@ -315,13 +315,13 @@ func recordsAsThePageShows(t *testing.T, w *world, runs map[string]string) {
 		}
 	}
 	if len(shown) < 4 {
-		t.Fatalf("rook-design shows the records %v", slices.Sorted(maps.Keys(shown)))
+		t.Fatalf("bot-design shows the records %v", slices.Sorted(maps.Keys(shown)))
 	}
 	prefix := regexp.MustCompile(`^\d\d:\d\d:\d\d \S+  `)
 	for name, want := range shown {
 		id, ok := runs[name]
 		if !ok {
-			t.Errorf("rook-design shows the record of <%s>, which the test does not follow", name)
+			t.Errorf("bot-design shows the record of <%s>, which the test does not follow", name)
 			continue
 		}
 		var printed []string
@@ -336,7 +336,7 @@ func recordsAsThePageShows(t *testing.T, w *world, runs map[string]string) {
 		for _, line := range want {
 			i := slices.Index(rest, line)
 			if i < 0 {
-				t.Errorf("corbie run show <%s> --record does not print, where rook-design shows it,\n%s\nIt prints:\n%s", name, line, strings.Join(printed, "\n"))
+				t.Errorf("corbie run show <%s> --record does not print, where bot-design shows it,\n%s\nIt prints:\n%s", name, line, strings.Join(printed, "\n"))
 				break
 			}
 			rest = rest[i+1:]
@@ -352,8 +352,8 @@ func TestNoModelFlowAgentIsFollowed(t *testing.T) {
 	w := newWorld(t)
 	dir := copyStarter(t)
 	write(t, dir, map[string]string{
-		".rook/telegram/telegram.js": heard(from("2", "deploy now", 12)),
-		"people/find.yaml":           telegramFind,
+		".packs/telegram/telegram.js": heard(from("2", "deploy now", 12)),
+		"people/find.yaml":            telegramFind,
 		"agents/assistant.yaml": `
 			flow: desk
 			input: { messages: list, medium: string, format: "any?", asker: map, thread: "any?", attachments: "any?", conversation: "any?" }
@@ -448,7 +448,7 @@ func TestDeletedAgentWhileQuestionWaits(t *testing.T) {
 	w := newWorld(t)
 	dir := copyStarter(t)
 	write(t, dir, map[string]string{
-		".rook/telegram/telegram.js": heard(from("2", "deploy now", 12)),
+		".packs/telegram/telegram.js": heard(from("2", "deploy now", 12)),
 		"agents/assistant.yaml": `
 			flow: desk
 			input: { messages: list, medium: string, format: "any?", asker: map, thread: "any?", attachments: "any?", conversation: "any?" }
@@ -620,7 +620,7 @@ func TestMissingModelSecretIsNamed(t *testing.T) {
 	dir := copyStarter(t)
 	_, address := toolModel(t, "hi", openClockTell()...)
 	files := traceHelper(address, "You help alice.")
-	files[".rook/telegram/telegram.js"] = heard(from("1", "hello", 10))
+	files[".packs/telegram/telegram.js"] = heard(from("1", "hello", 10))
 	write(t, dir, files)
 	receipt := w.syncAt(w.Client, dir, project)
 	if !strings.Contains(fmt.Sprint(receipt.Tree.Missing), "TEST_KEY") {

@@ -1,4 +1,4 @@
-# The router of grouse on Slack. It runs Rook's Slack listener as a child. It
+# The router of grouse on Slack. It runs the pack's Slack listener as a child. It
 # sends a message in #deploys that names the bot to deploys, keyed by the
 # thread, and any other direct message or message that names the bot in
 # #support to the conversation, keyed by the thread, the person and the agent
@@ -14,7 +14,7 @@ allow: [send:conversation, send:deploys, send:answers]
 initial: listening
 states:
   listening:
-    job: { machine: .rook/slack/listen.yaml, restart: { after: always } }
+    job: { machine: .packs/slack/listen.yaml, restart: { after: always } }
     on:
       message:
         - when: "${event.data.place === '#deploys' && !event.data.unaddressed && !event.data.change}"

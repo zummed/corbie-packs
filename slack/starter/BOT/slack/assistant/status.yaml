@@ -1,0 +1,2 @@
+# The pack's Slack status, which shows "Working on it." under a thread.
+include: .packs/slack/assistant/status.yaml

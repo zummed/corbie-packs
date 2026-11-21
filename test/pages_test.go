@@ -8,9 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	rook "github.com/zummed/corbie-rook/rook"
+	"github.com/zummed/corbie-packs/fixture"
 	"github.com/zummed/corbie/client"
-	"github.com/zummed/corbie/manual"
 )
 
 // examples gives the files a page shows: each block indented four spaces that
@@ -23,7 +22,7 @@ var starts = regexp.MustCompile(`^    # ([\w./-]+\.(?:yaml|js|md)|\.corbieignore
 
 func examples(t *testing.T, page string) []example {
 	t.Helper()
-	text, err := os.ReadFile(filepath.Join("../rook/pages", page+".txt"))
+	text, err := os.ReadFile(filepath.Join("../bot/pages", page+".txt"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,12 +55,12 @@ func examples(t *testing.T, page string) []example {
 // with the path of a starting file is that file, without its comments.
 func TestEveryExampleFileReads(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "project")
-	if err := rook.Init(dir, bot, rook.Services()); err != nil {
+	if err := fixture.Init(dir, bot, fixture.Services()); err != nil {
 		t.Fatal(err)
 	}
-	starting := rook.Starting(bot)
+	starting := fixture.Starting(bot)
 	var shown []string
-	for _, page := range []string{"rook-project", "rook-design"} {
+	for _, page := range []string{"bot-project", "bot-design"} {
 		for _, ex := range examples(t, page) {
 			if _, ok := starting[ex.path]; ok && ex.label == ex.path {
 				kept, err := os.ReadFile(filepath.Join(dir, ex.path))
@@ -118,19 +117,16 @@ func TestEveryExampleFileReads(t *testing.T) {
 // Each page's first line is its title and the sentence that is its summary, and
 // it ends with what to read next.
 func TestEveryPageIsWrittenAsCorbiesAre(t *testing.T) {
-	for _, page := range rook.Pages() {
+	for _, page := range fixture.Pages() {
 		first, _, _ := strings.Cut(page.Text, "\n")
 		if title, sentence, ok := strings.Cut(first, ": "); !ok || title == "" || !strings.HasSuffix(sentence, ".") || page.Summary != first {
 			t.Errorf("%s begins %q", page.Name, first)
 		}
-		if page.Name != "rook-starter" && !strings.Contains(page.Text, "\nReference\n---------\n") {
+		if !strings.Contains(page.Text, "\nReference\n---------\n") {
 			t.Errorf("%s has no Reference", page.Name)
 		}
 		if strings.Contains(page.Text, "\n## ") || strings.Contains(page.Text, "|---") || strings.Contains(page.Text, "\n```yaml") {
 			t.Errorf("%s holds Markdown", page.Name)
 		}
-	}
-	if !slices.ContainsFunc(rook.Pages(), func(p manual.Page) bool { return p.Name == "rook-starter" }) {
-		t.Fatal("there is no page rook-starter")
 	}
 }

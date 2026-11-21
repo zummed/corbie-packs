@@ -5,13 +5,13 @@
 # someone with infra:approve, for an hour. No press in time is no.
 agent: support
 description: Answers questions in #support, in direct messages and on orders issues.
-include: .rook/agent.yaml
+include: .packs/bot/agent.yaml
 model: { name: claude-sonnet-5-5, service: anthropic, secret: ANTHROPIC_KEY }
 system:
   - { include: ./support.md }
   - ${input.format}
 ask:
-  machine: .rook/approval.yaml
+  machine: .packs/bot/approval.yaml
   input:
     asker: "${input.asker.email}"
     request: "${input.messages.map((m) => (m.later != null ? '(a reminder the bot set) ' : '') + m.text).join('\\n')}"

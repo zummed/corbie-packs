@@ -1,4 +1,4 @@
-# The router of grouse on GitLab. It runs Rook's GitLab listener as a child,
+# The router of grouse on GitLab. It runs the pack's GitLab listener as a child,
 # reading group/orders. It sends each change to an issue to issue-log, keyed by
 # the issue, and each comment and opened issue that names the bot to the
 # conversation, keyed by the issue, the person and the agent support. It drops
@@ -16,7 +16,7 @@ initial: listening
 states:
   listening:
     job:
-      machine: .rook/gitlab/listen.yaml
+      machine: .packs/gitlab/listen.yaml
       input: { projects: [group/orders] }
       restart: { after: always }
     on:

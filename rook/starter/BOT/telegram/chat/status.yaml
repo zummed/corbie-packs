@@ -1,2 +1,0 @@
-# Rook's Telegram status, which shows that the bot is typing.
-include: .rook/telegram/chat/status.yaml

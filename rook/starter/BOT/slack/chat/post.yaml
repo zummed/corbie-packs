@@ -1,2 +1,0 @@
-# Rook's Slack post, which the conversation calls with { in, text }.
-include: .rook/slack/chat/post.yaml

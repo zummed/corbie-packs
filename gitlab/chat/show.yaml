@@ -1,0 +1,15 @@
+# GitLab's part of the pack's question, which only the question calls. ask writes
+# `text` as a comment on the issue `in`, project#iid, that asks for a comment
+# saying one of `choices`; tell writes a comment telling `by` `text`; close
+# writes `said` in a comment.
+flow: gitlab-chat-show
+description: Asks a question in a comment on a GitLab issue, tells someone why their answer does not count, and closes the question.
+input: { do: string, in: "string?", text: "string?", choices: "list?", question: "string?", sent: "any?", answer: "map?", by: "string?", said: "string?" }
+stages:
+  show:
+    job:
+      script: .packs/gitlab/gitlab.js
+      files: [.packs/gitlab/api.js]
+      input: "${Object.assign({ site: values.GITLAB_SITE }, input)}"
+      allow: ["secret:GITLAB_TOKEN@net:${values.GITLAB_SITE}"]
+      restart: { limit: 2 }

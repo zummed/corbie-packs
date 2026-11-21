@@ -1,7 +1,7 @@
 # The agent for a small group of people. It has no toolkit, so it only talks.
 agent: team
 description: Helps a small group of people.
-include: .rook/agent.yaml
+include: .packs/bot/agent.yaml
 model: { name: test-model, service: anthropic, secret: TEST_KEY }
 system: |
   You help a small group of people. What you write is read on a phone: answer in

@@ -1,0 +1,2 @@
+# The pack's Slack post, which the conversation calls with { in, text }.
+include: .packs/slack/chat/post.yaml

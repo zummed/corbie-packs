@@ -1,0 +1,14 @@
+# The pack's lookup, which a project places as people/find.yaml. It reads the table
+# people/scopes.yaml at the project's top, where each row is a name and scopes
+# under an email, matched ignoring case, or under a service and the person's
+# ID there, as slack:U0123456789. A person the table does not hold gives no
+# scopes and the name the service gave.
+flow: people-file
+description: Gives a person's name, email and scopes, found by their email or their ID on a service in people/scopes.yaml.
+input: { service: "string?", user: "string?", name: "string?", email: "string?" }
+stages:
+  find:
+    job:
+      script: ./file.js
+      files: [people/scopes.yaml]
+      input: { service: "${input.service || ''}", user: "${input.user || ''}", name: "${input.name || input.user || ''}", email: "${input.email || ''}" }

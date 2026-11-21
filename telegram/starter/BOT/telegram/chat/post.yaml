@@ -1,0 +1,2 @@
+# The pack's Telegram post, which the conversation calls with { in, text }.
+include: .packs/telegram/chat/post.yaml

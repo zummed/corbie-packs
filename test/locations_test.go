@@ -12,7 +12,7 @@ import (
 	"github.com/zummed/corbie/instance"
 )
 
-// These tests are of what a project's tree gives Rook: who may send to its
+// These tests are of what a project's tree gives the packs: who may send to its
 // runs, how its runs live through changes, and how a message is followed from
 // its router to every run it led to.
 
@@ -93,10 +93,10 @@ func TestTapReachesOnlyAWaitingQuestion(t *testing.T) {
 	w := newWorld(t)
 	dir := copyStarter(t)
 	write(t, dir, map[string]string{
-		".rook/telegram/telegram.js": oneMessage,
-		"agents/asker.yaml":          telegramAsker,
-		"people/find.yaml":           telegramFind,
-		"people/scopes.yaml":         "bob@example.com: { name: bob, scopes: [house:approve] }\n",
+		".packs/telegram/telegram.js": oneMessage,
+		"agents/asker.yaml":           telegramAsker,
+		"people/find.yaml":            telegramFind,
+		"people/scopes.yaml":          "bob@example.com: { name: bob, scopes: [house:approve] }\n",
 	})
 	w.sync(dir)
 	w.until("the answer", func() bool { return sayings(t, w)["one"] != nil })
@@ -107,7 +107,7 @@ func TestTapReachesOnlyAWaitingQuestion(t *testing.T) {
 	w.tap(question, "2", "yes")
 	w.until("the question answered", func() bool { return w.show(id).HasEnded() })
 	w.until("its answers run ended", func() bool { return keyed(w, "answers.yaml")[key][0].HasEnded() })
-	write(t, dir, map[string]string{".rook/telegram/telegram.js": `
+	write(t, dir, map[string]string{".packs/telegram/telegram.js": `
 		if (input.do === "hear") {
 		  if (input.cursor !== null) throw new Error("nothing more")
 		  emit("answer", { service: "telegram", question: "telegram:1:1:assistant", user: "2", choice: "yes" })

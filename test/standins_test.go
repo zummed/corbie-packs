@@ -43,13 +43,17 @@ func pointed(t *testing.T, service string, srv *httptest.Server, hosts ...string
 	return dir
 }
 
-// point rewrites the files of one service in a project, in .rook/<service>/
+// point rewrites the files of one service in a project, in .packs/bot/<service>/
 // and below it, so that its hosts name a stand-in, reached over a plain
-// connection. Nothing else of the service changes.
+// connection. GitLab's router is given the project group/project, since the
+// starting router names none. Nothing else of the service changes.
 func point(t *testing.T, dir, service string, srv *httptest.Server, hosts ...string) {
 	t.Helper()
+	if src, _ := os.ReadFile(filepath.Join(dir, router("gitlab"))); service == "gitlab" && strings.Contains(string(src), "input: {}") {
+		setSite(t, dir, router("gitlab"), "input: {}", "input: { projects: [group/project] }")
+	}
 	addr := strings.TrimPrefix(srv.URL, "http://")
-	err := filepath.WalkDir(filepath.Join(dir, ".rook", service), func(file string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(filepath.Join(dir, ".packs", service), func(file string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
 		}
@@ -414,7 +418,7 @@ func (tg *telegram) waitFor(w *world, chat, text string) {
 // A gitlab stands in for GitLab's REST API: projects and their issues, each
 // issue's notes and resource events, users, uploads to group/project,
 // repository files, commits and pipelines. The bot is user 1, "bot", and its
-// token gl-token. A project is named by its path, URL-encoded, as Rook names
+// token gl-token. A project is named by its path, URL-encoded, as the listener names
 // it. A list is given a page at a time, with the headers GitLab gives for
 // offset paging.
 type gitlab struct {

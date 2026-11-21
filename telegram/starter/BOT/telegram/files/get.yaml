@@ -1,0 +1,2 @@
+# The pack's Telegram download, which fetches the files a message names.
+include: .packs/telegram/files/get.yaml

@@ -1,6 +1,6 @@
 package test
 
-// Rook's filters for a message that does not name the bot: one matches words,
+// The pack's filters for a message that does not name the bot: one matches words,
 // and one asks a small model. Each gives { reply: { answer } }.
 
 import (
@@ -22,7 +22,7 @@ func TestWordsFilter(t *testing.T) {
 	if err := exampleProject(dir, nil); err != nil {
 		t.Fatal(err)
 	}
-	write(t, dir, map[string]string{"filters/words.yaml": "include: .rook/filters/words.yaml\n"})
+	write(t, dir, map[string]string{"filters/words.yaml": "include: .packs/bot/filters/words.yaml\n"})
 	w.sync(dir)
 	words := []any{"deploy", "build failed", "Größe", ""}
 	for text, want := range map[string]bool{
@@ -62,10 +62,10 @@ func TestModelFilterAsksAModel(t *testing.T) {
 	t.Cleanup(web.Close)
 	write(t, dir, map[string]string{"filters/interested.yaml": `
 		agent: interested
-		include: .rook/filters/model.yaml
+		include: .packs/bot/filters/model.yaml
 		model: { name: test-model, service: anthropic, address: ` + web.URL + `, secret: TEST_KEY }
 		system:
-		  - { include: .rook/filters/model.yaml#system }
+		  - { include: .packs/bot/filters/model.yaml#system }
 		  - The bot answers questions about the build.
 	`})
 	w.sync(dir)

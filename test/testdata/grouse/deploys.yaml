@@ -7,7 +7,7 @@ lifetime: keyed
 receive: [grouse/slack/grouse]
 allow: [send:grouse/gitlab/pipeline/create, send:grouse/slack/chat/post]
 ask:
-  machine: .rook/approval.yaml
+  machine: .packs/bot/approval.yaml
   input: { ask: [{ at: grouse/slack/chat/ask, in: "${input.chat}" }], approvers: "deploy:approve", within: 1h, asker: "${input.email}", request: "${input.text}" }
 initial: waiting
 states:
