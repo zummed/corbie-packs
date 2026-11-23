@@ -253,7 +253,7 @@ func TestTraceMessageToToolsAndApproval(t *testing.T) {
 			approval = a.Child
 		}
 	}
-	if got := w.arrived(agent, "done", "ask"); len(got) != 1 || fmt.Sprint(got[0]) != "map[approved:[tell] note:alice said yes.]" {
+	if got := w.arrived(agent, "done", "tell.approval"); len(got) != 1 || fmt.Sprint(got[0]) != "map[note:alice said yes. ok:true]" {
 		t.Errorf("the approval gave the agent %v", got)
 	}
 	// 4. approval -> question, and who answered it
