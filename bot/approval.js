@@ -30,6 +30,7 @@ const shown = (args) => {
 // answer gives the first answer that counts in any place, given the question
 // stage's output, an item for each place. With no answer, the answer is no.
 if (input.do === "answer") {
+  if (!input.asked.length) return { ok: false, note: "No one was asked: the approval's ask names no place." }
   const answer = input.asked.map((p) => p.output).find((o) => o && o.by && !o.elsewhere)
   if (answer) return { ok: answer.choice === "yes", note: answer.by + " said " + answer.choice + "." }
   if (input.asked.every((p) => p.error)) return { ok: false, note: "The question could not be asked: " + input.asked.map((p) => p.error).join("; ") }

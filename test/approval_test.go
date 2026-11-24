@@ -964,3 +964,20 @@ func TestApprovalNoPlaceAskedIsNo(t *testing.T) {
 		t.Fatalf("the approval ended %s with %v", run.Status, run.Output)
 	}
 }
+
+// An approval whose ask names no place approves nothing and says why.
+func TestApprovalWithNoPlaceIsNo(t *testing.T) {
+	w := newWorld(t)
+	dir := approvalProject(t, w, noModel)
+	write(t, dir, map[string]string{"agents/approve.yaml": "include: .packs/bot/approval.yaml"})
+	w.sync(dir)
+	id := w.start("agents/approve.yaml", map[string]any{
+		"job":       map[string]any{"name": "restart", "run": map[string]any{"machine": "deploys"}},
+		"ask":       []any{},
+		"approvers": "messages:approve",
+	})
+	w.until("the approval to end", func() bool { return w.show(id).HasEnded() })
+	if run := w.show(id); run.Status != "done" || fmt.Sprint(run.Output) != "map[note:No one was asked: the approval's ask names no place. ok:false]" {
+		t.Fatalf("the approval ended %s with %v: %s", run.Status, run.Output, run.Error)
+	}
+}
