@@ -60,9 +60,12 @@ func traceHelper(address, system string) map[string]string {
 			include: .packs/bot/agent.yaml
 			model: { name: test-model, service: anthropic, address: "` + address + `", secret: TEST_KEY }
 			system: ` + system + `
-			ask:
-			  machine: .packs/bot/approval.yaml
-			  input: { ask: [{ at: grouse/telegram/chat/ask, in: "1" }], approvers: "messages:approve" }
+			hooks:
+			  approval:
+			    when: "${job.approve}"
+			    before:
+			      machine: .packs/bot/approval.yaml
+			      input: { job: "${job}", ask: [{ at: grouse/telegram/chat/ask, in: "1" }], approvers: "messages:approve" }
 			toolkits:
 			  messages: { include: toolkits/messages/toolkit.yaml }
 		`,
@@ -249,7 +252,7 @@ func TestTraceMessageToToolsAndApproval(t *testing.T) {
 	}
 	var approval string
 	for _, a := range w.ownAsks(agent, instance.AskChild) {
-		if a.Name == "ask" {
+		if a.Name == "tell.approval" {
 			approval = a.Child
 		}
 	}

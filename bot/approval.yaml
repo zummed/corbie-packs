@@ -44,7 +44,7 @@ stages:
         at: "${item.at}"
         question:
           in: "${item.in}"
-          text: "${input.job.machine} wants to run ${input.job.name}.\n${stages.brief.output}"
+          text: "${input.job.run.machine} wants to run ${input.job.name}.\n${stages.brief.output}"
           choices: ["yes", "no"]
           approvers: "${input.approvers}"
           asker: "${input.asker || ''}"

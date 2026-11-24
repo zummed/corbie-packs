@@ -776,7 +776,7 @@ func TestSlackLongAnswerIsNotSaidTwice(t *testing.T) {
 }
 
 // slackMessages is a toolkit whose one tool posts on Slack, and waits for the
-// agent's ask.
+// agent's hook.
 const slackMessages = `
 	description: Messages to people on Slack.
 	instructions: Write to a person only when the asker asks you to.
@@ -793,7 +793,7 @@ func TestSlackApprovalByButtonCanBeFollowed(t *testing.T) {
 	s := newSlack(t)
 	w := newWorld(t)
 	dir, model := slackAgentProject(t, w, s)
-	// The agent's ask asks for a yes in #approvals from someone who holds
+	// The agent's hook asks for a yes in #approvals from someone who holds
 	// messages:approve.
 	agent, err := os.ReadFile(filepath.Join(dir, "agents/assistant.yaml"))
 	if err != nil {
@@ -954,7 +954,7 @@ func TestEveryServiceAtOnce(t *testing.T) {
 }
 
 // slackApprovedToolkit is a toolkit whose tell posts on Slack, held for the
-// agent's ask.
+// agent's hook.
 const slackApprovedToolkit = `
 	description: Messages to people on Slack.
 	tools:
@@ -986,9 +986,9 @@ func TestGitLabRequestApprovedOnSlack(t *testing.T) {
 		return llmstandin.Reply{Text: "told"}
 	})
 	write(t, dir, map[string]string{
-		// The agent's ask is a yes on Slack, in alice's direct message, from
+		// The agent's hook is a yes on Slack, in alice's direct message, from
 		// someone who holds messages:approve.
-		"agents/assistant.yaml":       modelAgent("assistant", url, "ask:\n  machine: .packs/bot/approval.yaml\n  input: { ask: [{ at: grouse/slack/chat/ask, in: U1 }], approvers: \"messages:approve\", request: \"${input.messages.map((m) => m.text).join('\\\\n')}\" }\ntoolkits:\n  slack: { include: toolkits/slack/toolkit.yaml }\n"),
+		"agents/assistant.yaml":       modelAgent("assistant", url, "hooks:\n  approval:\n    when: \"${job.approve}\"\n    before:\n      machine: .packs/bot/approval.yaml\n      input: { job: \"${job}\", ask: [{ at: grouse/slack/chat/ask, in: U1 }], approvers: \"messages:approve\", request: \"${input.messages.map((m) => m.text).join('\\\\n')}\" }\ntoolkits:\n  slack: { include: toolkits/slack/toolkit.yaml }\n"),
 		"toolkits/slack/toolkit.yaml": slackApprovedToolkit,
 		".corbieignore":               ignoring(t, "slack"),
 	})

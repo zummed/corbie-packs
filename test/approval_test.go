@@ -404,7 +404,7 @@ func TestPressThatCannotBeCheckedDoesNotCount(t *testing.T) {
 	}
 }
 
-// A statechart with no model asks for approval as an agent does: its ask is
+// A statechart with no model asks for approval as an agent does: its hook is
 // the pack's approval, and a job marked approve: true waits for a press from
 // someone with the approvers' scope, then runs.
 func TestStatechartAsksForApproval(t *testing.T) {
@@ -474,7 +474,7 @@ func TestApprovalQuestionIsShort(t *testing.T) {
 	write(t, dir, map[string]string{"agents/approve.yaml": "include: .packs/bot/approval.yaml"})
 	w.sync(dir)
 	w.start("agents/approve.yaml", map[string]any{
-		"job": map[string]any{"name": "apply", "machine": "deploys", "input": map[string]any{"vm": "web-1", "opts": map[string]any{"force": true}, "diff": "-a\n+b"}},
+		"job": map[string]any{"name": "apply", "run": map[string]any{"machine": "deploys"}, "input": map[string]any{"vm": "web-1", "opts": map[string]any{"force": true}, "diff": "-a\n+b"}},
 		"ask": []any{map[string]any{"at": bot + "/telegram/chat/ask", "in": "1"}}, "approvers": "messages:approve", "request": "restart web-1",
 	})
 	question := w.question(map[string]bool{})
@@ -719,7 +719,7 @@ func TestApprovalQuestionCutsALongLine(t *testing.T) {
 	link := "https://example.com/get?" + strings.Repeat("x", 976)
 	lines := strings.Repeat("a line of a diff\n", 30)
 	w.start("agents/approve.yaml", map[string]any{
-		"job": map[string]any{"name": "fetch", "machine": "fetcher", "input": map[string]any{"url": link, "diff": lines}},
+		"job": map[string]any{"name": "fetch", "run": map[string]any{"machine": "fetcher"}, "input": map[string]any{"url": link, "diff": lines}},
 		"ask": []any{map[string]any{"at": bot + "/telegram/chat/ask", "in": "1"}}, "approvers": "messages:approve",
 	})
 	text := w.did(w.question(map[string]bool{}).ID, "ask")[0]["text"].(string)
@@ -773,7 +773,7 @@ func twoPlaces(w *world, dir, a, b string) string {
 	w.sync(dir)
 	ask := func(in string) map[string]any { return map[string]any{"at": bot + "/telegram/chat/ask", "in": in} }
 	return w.start("agents/approve.yaml", map[string]any{
-		"job":       map[string]any{"name": "restart", "machine": "deploys", "input": map[string]any{"vm": "web-1"}},
+		"job":       map[string]any{"name": "restart", "run": map[string]any{"machine": "deploys"}, "input": map[string]any{"vm": "web-1"}},
 		"ask":       []any{ask(a), ask(b)},
 		"approvers": "messages:approve",
 	})

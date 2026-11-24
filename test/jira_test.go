@@ -645,7 +645,7 @@ func approvingOnJira(t *testing.T, j *jira, in, within string) (*world, string) 
 	w.kept(router("jira"))
 	tick(w, j.asked)
 	input := map[string]any{
-		"asking": map[string]any{}, "jobs": []any{map[string]any{"name": "restart", "asked": map[string]any{"description": "Restarts a VM.", "args": map[string]any{"vm": "web-1"}, "said": "Restarting it."}}},
+		"job": map[string]any{"name": "restart", "run": map[string]any{"machine": "assistant"}, "tool": map[string]any{"name": "restart", "description": "Restarts a VM.", "args": map[string]any{"vm": "web-1"}, "said": "Restarting it."}},
 		"ask": []any{map[string]any{"at": bot + "/jira/chat/ask", "in": in}}, "approvers": "messages:approve", "asker": "bob@example.com", "request": "please restart web-1",
 	}
 	if within != "" {
@@ -663,7 +663,7 @@ func TestJiraQuestionIsAnsweredByAComment(t *testing.T) {
 	j := newJira(t)
 	w, approval := approvingOnJira(t, j, "OPS-12", "")
 	question := questionIn(w, j)
-	if asked := j.saying()[0]; !strings.Contains(asked, "A machine wants to run restart.") || !strings.Contains(asked, "Asked by bob@example.com.") || !strings.Contains(asked, "bq. please restart web-1") ||
+	if asked := j.saying()[0]; !strings.Contains(asked, "assistant wants to run restart.") || !strings.Contains(asked, "Asked by bob@example.com.") || !strings.Contains(asked, "bq. please restart web-1") ||
 		!strings.Contains(asked, "* {{no "+question+"}}") || strings.Count(asked, question) != 2 {
 		t.Errorf("the question is %q", asked)
 	}
@@ -692,7 +692,7 @@ func TestJiraQuestionIsAnsweredByAComment(t *testing.T) {
 	}
 	answer("14", "acc-a", " {{Yes "+question+"}} ", "alice said yes.")
 	out := ended(w, approval).(map[string]any)
-	if !slices.Equal(out["approved"].([]any), []any{"restart"}) || out["note"] != "alice said yes." {
+	if out["ok"] != true || out["note"] != "alice said yes." {
 		t.Errorf("the approval gave %v", out)
 	}
 	before := len(j.saying())
@@ -735,7 +735,7 @@ func TestJiraAnswerOnAnotherIssueDoesNotCount(t *testing.T) {
 	if got := j.saying()[said]; got != "alice said yes." {
 		t.Errorf("the bot said %q", got)
 	}
-	if out := ended(w, approval).(map[string]any); !slices.Equal(out["approved"].([]any), []any{"restart"}) {
+	if out := ended(w, approval).(map[string]any); out["ok"] != true {
 		t.Errorf("the approval gave %v", out)
 	}
 }
@@ -755,7 +755,7 @@ func TestJiraQuestionInAnyCaseOrByIDIsAnswered(t *testing.T) {
 			if got := j.saying()[said]; got != "alice said yes." {
 				t.Errorf("the bot said %q", got)
 			}
-			if out := ended(w, approval).(map[string]any); !slices.Equal(out["approved"].([]any), []any{"restart"}) {
+			if out := ended(w, approval).(map[string]any); out["ok"] != true {
 				t.Errorf("the approval gave %v", out)
 			}
 		})
@@ -769,7 +769,7 @@ func TestJiraQuestionWithNoAnswerIsNo(t *testing.T) {
 	questionIn(w, j)
 	w.set(w.now().Add(61 * time.Minute))
 	out := ended(w, approval).(map[string]any)
-	if len(out["approved"].([]any)) != 0 || out["note"] != "No one answered in time, so the answer is no." {
+	if out["ok"] != false || out["note"] != "No one answered in time, so the answer is no." {
 		t.Errorf("the approval gave %v", out)
 	}
 	if got := j.saying(); got[len(got)-1] != "No one answered in time, so the answer is no." {

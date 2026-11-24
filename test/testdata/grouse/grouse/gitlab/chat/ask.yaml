@@ -1,7 +1,7 @@
 # The pack's question. It takes calls only from the locations in receive:, and an
 # answer only from the router at `router`, which sends each comment that
 # answers it to `answers`. An agent's approval calls it from agents/. A
-# machine elsewhere that calls it, or whose ask: is the approval, such as a
+# machine elsewhere that calls it, or whose hook is the approval, such as a
 # statechart with an approve: job, calls it from its own location, which must
 # be added to receive:, or the call is refused. It takes close from the
 # ballot, and calls the lookup at `lookup` for who answered, and its service's

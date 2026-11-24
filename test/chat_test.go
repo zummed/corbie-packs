@@ -234,7 +234,7 @@ func TestTelegramOverhearIsRefused(t *testing.T) {
 }
 
 // houseToolkit is a toolkit with a read tool, lights, and an act tool, tell,
-// which waits for the agent's ask.
+// which waits for the agent's hook.
 const houseToolkit = `
 	description: The house, and messages to its people.
 	tools:
@@ -324,10 +324,10 @@ func houseModel(c llmstandin.Call) llmstandin.Reply {
 	return llmstandin.Reply{Text: "ok: " + said[start+6:start+end]}
 }
 
-// houseAsk is the ask of an agent with the toolkit house: a yes from someone
+// houseAsk is the hook of an agent with the toolkit house: a yes from someone
 // with house:approve in alice's chat. It names no asker, so alice may approve
 // what she asked for.
-const houseAsk = "ask:\n  machine: .packs/bot/approval.yaml\n  input: { ask: [{ at: grouse/telegram/chat/ask, in: \"1\" }], approvers: \"house:approve\", request: \"${input.messages.map((m) => m.text).join('\\\\n')}\" }\n"
+const houseAsk = "hooks:\n  approval:\n    when: \"${job.approve}\"\n    before:\n      machine: .packs/bot/approval.yaml\n      input: { job: \"${job}\", ask: [{ at: grouse/telegram/chat/ask, in: \"1\" }], approvers: \"house:approve\", request: \"${input.messages.map((m) => m.text).join('\\\\n')}\" }\n"
 
 // houseProject makes a project whose agent at agents/assistant may open the
 // toolkit house, for a person with the scope house, and asks the stand-in
@@ -512,7 +512,7 @@ func TestApprovalTimesOut(t *testing.T) {
 	}
 }
 
-// An agent whose ask names the asker: alice's own tap on her request does not
+// An agent whose hook names the asker: alice's own tap on her request does not
 // count, she is told someone else must answer it, and the buttons stay. Carol,
 // who also holds house:approve, answers it.
 func TestOwnRequestIsNotApprovedByTheAsker(t *testing.T) {
