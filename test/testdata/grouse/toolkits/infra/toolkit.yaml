@@ -1,6 +1,7 @@
-# The servers. restart waits for the agent's ask, which asks in #infra.
+# The servers. restart waits for a yes in #infra, from someone with
+# infra:approve, for an hour: the agent's hook reads its meta:.
 description: The servers. Their state, and restarting one.
 instructions: { include: ./infra.md }
 tools:
   vm_status: { call: toolkits/infra/status }
-  restart: { call: toolkits/infra/restart, approve: true }
+  restart: { call: toolkits/infra/restart, approve: true, meta: { channel: "#infra", approvers: "infra:approve", within: 1h } }

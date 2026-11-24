@@ -192,9 +192,18 @@ To add the agent:
       chat: answer in a few short sentences, in everyday words.
 
       ${input.format}
-    ask:
-      machine: .packs/bot/approval.yaml
-      input: { ask: [{ at: grouse/slack/chat/ask, in: "#orders-team" }], approvers: "orders:approve", within: 1d, asker: "${input.asker.email}", request: "${input.messages.map((m) => (m.later != null ? '(a reminder the bot set) ' : '') + m.text).join('\\n')}" }
+    hooks:
+      approval:
+        when: "${job.approve}"
+        before:
+          machine: .packs/bot/approval.yaml
+          input:
+            job: "${job}"
+            ask: [{ at: grouse/slack/chat/ask, in: "${job.meta.channel}" }]
+            approvers: "${job.meta.approvers}"
+            within: "${job.meta.within || '7d'}"
+            asker: "${input.asker.email}"
+            request: "${input.messages.map((m) => (m.later != null ? '(a reminder the bot set) ' : '') + m.text).join('\\n')}"
     toolkits:
       orders: { include: toolkits/orders/toolkit.yaml, when: "${input.asker.scopes.includes('orders:read')}" }
 
@@ -207,6 +216,7 @@ To add the agent:
         call: grouse/gitlab/repository/commits/create
         input: { project: group/orders }
         approve: true
+        meta: { channel: "#orders-team", approvers: "orders:approve", within: 1d }
         when: "${input.asker.scopes.includes('orders:write')}"
 
     # toolkits/orders/orders.md
@@ -231,7 +241,7 @@ To add the agent:
 - A tool written `call:` takes its description and arguments from the machine at its location, without the names its `input:` fixes, so the model never names the project. A schedule, another machine or a client can run that machine without the agent.
 - A line of `.corbieignore` is a path and takes no `*`. A machine in a toolkit's directory has the location its path gives, such as `toolkits/infra/restart`.
 - A tool that uses no secret is written in place in the toolkit's file, which costs one file and one run less, and runs at the agent's location. A tool that uses a secret is a machine in the toolkit's directory, called with `call:`, with the secret set at its location or the toolkit's directory, as `--at /my-bot/toolkits/infra`, so the agent's run cannot read it.
-- `change_file` waits for the agent's `ask:`, until someone with `orders:approve`, who did not ask, presses yes in `#orders-team`. A no, or no press within a day, goes back to the model as `denied`.
+- `change_file` has `approve: true`, so it waits for the agent's hook, the approval, until someone with `orders:approve`, who did not ask, presses yes in `#orders-team`. The channel, the scope and the wait are the tool's `meta:`, which the hook reads as `job.meta`. A no, or no press within a day, goes back to the model as `denied`.
 - Any machine at `agents/assistant` with the same input and output answers in its place, a flow with no model included, as `.packs/bot/pages/bot-design.txt` says under The agent.
 
 Common changes
@@ -240,7 +250,7 @@ Common changes
   The bot should                                    Change
   look something up, or do something, when asked    a tool in a toolkit, and a machine in its directory when it uses a secret
   let some people do more                           a toolkit's or a tool's when:, and their scopes
-  ask other people about one toolkit or tool        an entry of by: in the agent's ask
+  ask other people about one tool                   that tool's meta:
   answer in one channel with other toolkits         a second agent and conversation, and a rule in the router
   answer some messages with steps of its own        a keyed statechart, and a rule in the router
   answer some messages that do not name it          overhear: true, a rule in the router, and a filter stage
@@ -265,17 +275,7 @@ Common changes
 - To answer some of those, add a stage that calls a filter to the turn in `conversation.yaml`, as its comment shows, and place `.packs/bot/filters/words.yaml`, or write an agent that includes `.packs/bot/filters/model.yaml`.
 - To clean a reply posted outside a direct message, add a stage that calls a redactor of your own, as the comment in `conversation.yaml` shows, and `send:redact` to the turn's `allow:`. The model still sees every tool's whole result.
 - To hear every public issue and comment on GitLab or Jira, add `overhear: true` to the listener's input, and to wait until an opened issue is finished, `settle: 2m`. On GitLab, `group: <path>` reads every project of a group with one ask.
-- To ask other people about one toolkit or tool, give the approval an entry of `by:` under its name. A held call of that toolkit or tool goes to the entry's `ask`, `approvers` and `within`, and every other to the approval's own:
-
-      ask:
-        machine: .packs/bot/approval.yaml
-        input:
-          ask: [{ at: grouse/slack/chat/ask, in: "#orders-team" }]
-          approvers: "orders:approve"
-          asker: "${input.asker.email}"
-          by:
-            infra: { ask: [{ at: grouse/slack/chat/ask, in: "#infra" }], approvers: "infra:approve", within: 1h }
-
+- To ask other people about one tool, give it its own `meta:`, as `meta: { channel: "#infra", approvers: "infra:approve", within: 1h }`. The agent's hook asks in that channel. A tool with `approve: true` and no `meta:` is denied, since the hook cannot be filled in.
 - To post from a machine, call the bot's `chat/post` with `{ in, text }`, as `.packs/bot/pages/bot-design.txt` shows under The packs' calls.
 - To find people somewhere else, write `people/find.yaml` as a machine of your own that takes `{ service, user, name, email }` and gives `{ name, email, scopes }`.
 - To add a service, run `corbie add github.com/zummed/corbie-packs/<service> --set BOT=grouse`, set the service's secrets and values, and submit. The conversation answers every service already.

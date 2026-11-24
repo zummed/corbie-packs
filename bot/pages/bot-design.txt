@@ -58,7 +58,7 @@ that run names the run and step that started it as its cause.
 
 1. In the router's record, each message is a send to `/my-bot/conversation#<key>`, naming the conversation's run.
 2. In the conversation's record, each turn is a child run, and the turn's call to `/my-bot/agents/assistant` names the agent's run.
-3. The agent's record shows each tool as a job, a held tool as `hold <tool> for the ask`, and the approval as a child run, with a child run `place` for each place it asks, whose call to the bot's `chat/ask` names the question's run.
+3. The agent's record shows each tool as a job, a held tool as `hold <tool> for its hooks`, and the approval as a child run, with a child run `place` for each place it asks, whose call to the bot's `chat/ask` names the question's run.
 4. The question's record shows each press checked, and what the lookup gave for the presser.
 
 These are the records of a message on Telegram whose agent opens the toolkit
@@ -72,11 +72,11 @@ shown without its time and run, and a name in angle brackets, such as
       step 3  -> job answering: a machine, <turn>
       step 1  -> job asker: a call to /my-bot/people/find, <find>
     corbie run show <agent> --record
-      step 6  -> hold tell for the ask
-      step 6  -> job ask: a machine, <approval>
+      step 6  -> hold tell for its hooks
+      step 6  -> job tell.approval: a machine, <approval>
       step 2  -> job question.0: a machine, <place>
       step 1  -> job asking: a call to /my-bot/grouse/telegram/chat/ask, <question>
-      step 7  <- done from ask {"approved":["tell"],"note":"alice said yes."}
+      step 7  <- done from tell.approval {"note":"alice said yes.","ok":true}
       step 7  -> job tell: a call to /my-bot/grouse/telegram/chat/post, <tell>
     corbie run show <question> --record
       step 4  -> job checking: a machine, <press>
@@ -159,7 +159,7 @@ others' files name them.
   .packs/gitlab/                         chat/post, chat/show, issues/read, issues/notes/create, issues/notes/list, uploads/create, files/get, repository/files/read, repository/commits/create, pipeline/create, api.js
   .packs/jira/                           chat/post, chat/show, issue/comment/create, issue/comment/list, issue/attachments/create, attachment/get, api.js
   .packs/bot/chat/ask.yaml               the question, the same on every service
-  .packs/bot/approval.yaml, approval.js  the ask a machine names
+  .packs/bot/approval.yaml, approval.js  the approval, which a machine names as a hook
   .packs/bot/people/file.yaml, file.js   the lookup that reads people/scopes.yaml
   .packs/bot/agent.yaml                  included by an agent: its input, prompt, conversation, receive: and the tools progress and later
   .packs/bot/later.yaml                  the reminder that later.yaml places
@@ -425,27 +425,29 @@ approval ask in several places at once.
 A later `settled` is dropped. The ballot ends when its approval sends it
 `over`, or a day after it settled.
 
-The pack's approval, `.packs/bot/approval.yaml`, is an ask, which an agent or another
-machine names under `ask:`. It asks the question in every place of `ask` at
-once, with yes and no, naming the asker by email and each held call with its
-arguments, and quoting what was asked and what the agent said. An argument of
-one line over 300 characters is shown as its first and last 150 characters,
-with its length. It gives `{ approved, note }`.
+The pack's approval, `.packs/bot/approval.yaml`, is a hook's job: an agent or
+another machine names it under `hooks:`, as `before:`, with
+`when: "${job.approve}"`. It runs once for each held job. It asks the question
+in every place of `ask` at once, with yes and no, naming the asker by email
+and the held call with its arguments, and quoting what was asked and what the
+agent said. An argument of one line over 300 characters is shown as its first
+and last 150 characters, with its length. It gives `{ ok, note }`.
 
+  job         the held job, written `"${job}"`
   ask         the places, each { at, in }: the question's location, such as grouse/slack/chat/ask, and where it is posted there: a channel, a thread or a chat
   approvers   the scope a press needs to count
   within      how long it waits; 7d by default, and no press in time is no
   asker       the email of the person who asked, or `<service>:<their ID>`, shown in the question, whose own press is refused; left out, they may approve their own request
   request     what was asked, shown quoted
-  by          by a tool's or a toolkit's name, its own ask, approvers or within; tools of one name in two toolkits share an entry
 
-An agent has one ask, which is shown each held call's `tool` and
-`toolkit`. A held call whose tool's name, or else whose toolkit's name, is an
-entry of `by` is asked about apart from the other calls, with that entry's
-fields in place of the approval's. A call left with no place to ask, or no
-approvers, is denied with the reason.
+A tool says who approves it in its `meta:`, which the hook reads as
+`job.meta`, so one hook asks in each tool's own channel, as
+`.packs/bot/pages/bot-project.txt` shows. A second hook with its own `when:`
+asks other people about some calls, and a call both are for waits for both. A
+held call whose hook cannot be filled in, as when its tool has no `meta:`, is
+denied with the reason.
 
-A machine that is no agent asks the same way: its `ask:` is the approval, and
+A machine that is no agent asks the same way: its hook is the approval, and
 a job marked `approve: true` waits for it. Here one run for each thread starts
 the orders pipeline once someone with `deploy:approve`, who did not ask,
 presses yes.
@@ -456,9 +458,12 @@ presses yes.
     lifetime: keyed
     receive: [grouse/slack/grouse]
     allow: [send:grouse/gitlab/pipeline/create, send:grouse/slack/chat/post]
-    ask:
-      machine: .packs/bot/approval.yaml
-      input: { ask: [{ at: grouse/slack/chat/ask, in: "${input.chat}" }], approvers: "deploy:approve", within: 1h, asker: "${input.email}", request: "${input.text}" }
+    hooks:
+      approval:
+        when: "${job.approve}"
+        before:
+          machine: .packs/bot/approval.yaml
+          input: { job: "${job}", ask: [{ at: grouse/slack/chat/ask, in: "${input.chat}" }], approvers: "deploy:approve", within: 1h, asker: "${input.email}", request: "${input.text}" }
     initial: waiting
     states:
       waiting:
@@ -491,9 +496,9 @@ presses yes.
         lookup: { const: people/find, default: people/find }
         show: { const: grouse/slack/chat/show, default: grouse/slack/chat/show }
 
-- The approval runs at the asking machine's location, so the question's `receive:` lists that location, or the call is refused.
-- The approval gives each question the ballot `{ at: ballot, key: <the approval's run ID>/<n> }`, `<n>` numbering the calls it asks about apart. Its answer is the first that counts in any place; a place whose question fails leaves the others asking.
-- A held call that is not approved fails as `denied`, which goes back to a model as the tool's result.
+- The approval runs at the location of the machine whose job is held, so the question's `receive:` lists that location, or the call is refused.
+- The approval gives each question the ballot `{ at: ballot, key: <the approval's run ID> }`. Its answer is the first that counts in any place; a place whose question fails leaves the others asking.
+- A held call the approval says no to fails as `denied`, which goes back to a model as the tool's result.
 - The router sends the thread's messages to `deploys`, as `.packs/bot/pages/bot-project.txt` shows under Common changes.
 
 The packs' calls
@@ -573,7 +578,7 @@ Who may do what
 2. A service's secrets are set at `/my-bot/<bot>/<service>`, and a toolkit's at `/my-bot/toolkits/<name>`, so the agent's run, at `/my-bot/agents/assistant`, cannot read them.
 3. An agent is allowed only its model. Its model calls the agent's own tools, the tools of each toolkit it was offered and opened, and Corbie's tools that read blobs.
 4. A toolkit is offered only when its `when:` holds on the agent's input, which holds the asker's scopes from the lookup.
-5. A tool marked `approve: true` waits for the agent's ask, which counts a press only from someone whose scopes hold its approvers.
+5. A tool marked `approve: true` waits for the agent's hook, the approval, which counts a press only from someone whose scopes hold its approvers.
 
 What the packs do not defend against
 ---------------------------------
@@ -596,5 +601,5 @@ Reference
   .packs/bot/pages/bot-project.txt    making a project, and the common changes
   corbie manual a-directory            the tree, .corbieignore, and a file of one line that places a machine
   corbie manual machines-together      sends, calls and receive:
-  corbie manual approval               how a held job waits for its ask
+  corbie manual hooks                  how a held job waits for its hooks
   corbie manual agent                  an agent's tools, toolkits and when:

@@ -159,7 +159,7 @@ func TestHeldCallWaitsForItsApprovers(t *testing.T) {
 	if run := w.show(agent); run.Status != "done" {
 		t.Fatalf("the agent ended %s: %v", run.Status, run.Error)
 	}
-	if got := fmt.Sprint(w.arrived(agent, "done", "ask")); got != "[map[approved:[] note:alice said no.]]" {
+	if got := fmt.Sprint(w.arrived(agent, "done", "tell.approval")); got != "[map[note:alice said no. ok:false]]" {
 		t.Errorf("the approval gave %s", got)
 	}
 	if got := last(model.Calls[len(model.Calls)-1]); !strings.Contains(got, "alice said no.") {
@@ -187,7 +187,7 @@ func TestApprovalResultNamesTheApprover(t *testing.T) {
 	agent := w.start("agents/assistant.yaml", asking("tell carol hello"))
 	w.press(w.question(map[string]bool{}).ID, "1", "yes")
 	w.until("the agent to end", func() bool { return w.show(agent).HasEnded() })
-	if got := fmt.Sprint(w.arrived(agent, "done", "ask")); got != "[map[approved:[tell] note:alice said yes.]]" {
+	if got := fmt.Sprint(w.arrived(agent, "done", "tell.approval")); got != "[map[note:alice said yes. ok:true]]" {
 		t.Errorf("the approval gave %s", got)
 	}
 	if got := inputs(t, w, "telegram-chat-post"); len(got) != 1 || got[0]["in"] != "3" || got[0]["text"] != "hello" {
@@ -198,10 +198,11 @@ func TestApprovalResultNamesTheApprover(t *testing.T) {
 	}
 }
 
-// Two held calls in one turn are one question, and one yes runs both.
-func TestTwoHeldCallsAreOneQuestion(t *testing.T) {
+// Two held calls in one turn are two questions, each answered apart: a yes
+// runs one call and a no refuses the other.
+func TestTwoHeldCallsAreTwoQuestions(t *testing.T) {
 	w := newWorld(t)
-	_, address := standin(t, w, func(c llmstandin.Call) llmstandin.Reply {
+	model, address := standin(t, w, func(c llmstandin.Call) llmstandin.Reply {
 		switch toolUses(c) {
 		case 0:
 			return calls("open", `{"toolkit": "messages"}`)
@@ -216,23 +217,30 @@ func TestTwoHeldCallsAreOneQuestion(t *testing.T) {
 	dir := approvalProject(t, w, address)
 	w.sync(dir)
 	agent := w.start("agents/assistant.yaml", asking("tell them"))
-	question := w.question(map[string]bool{})
-	text := w.did(question.ID, "ask")[0]["text"].(string)
-	if !strings.Contains(text, "assistant wants to run tell, tell.") || !strings.Contains(text, "first") || !strings.Contains(text, "second") {
-		t.Errorf("the question %q does not show both calls", text)
-	}
-	w.press(question.ID, "1", "yes")
+	var first, second *client.Run
+	w.until("two questions", func() bool {
+		first, second = nil, nil
+		for _, run := range questions(w) {
+			if asked := w.did(run.ID, "ask"); len(asked) == 1 && strings.Contains(asked[0]["text"].(string), "first") {
+				first = run
+			} else if len(asked) == 1 && strings.Contains(asked[0]["text"].(string), "second") {
+				second = run
+			}
+		}
+		return first != nil && second != nil
+	})
+	w.press(first.ID, "1", "yes")
+	w.press(second.ID, "1", "no")
 	w.until("the agent to end", func() bool { return w.show(agent).HasEnded() })
 	var said []string
 	for _, in := range inputs(t, w, "telegram-chat-post") {
 		said = append(said, fmt.Sprint(in["in"], ": ", in["text"]))
 	}
-	slices.Sort(said)
-	if !slices.Equal(said, []string{"1: first", "3: second"}) {
+	if !slices.Equal(said, []string{"1: first"}) {
 		t.Errorf("the held calls ran as %q", said)
 	}
-	if n := len(stubs(t, w, "chat-ask")); n != 1 {
-		t.Errorf("%d questions were asked", n)
+	if got := last(model.Calls[len(model.Calls)-1]); !strings.Contains(got, "alice said no.") {
+		t.Errorf("the model was told %s", got)
 	}
 }
 
@@ -396,7 +404,7 @@ func TestPressThatCannotBeCheckedDoesNotCount(t *testing.T) {
 	}
 }
 
-// A statechart with no model asks for approval as an agent does: its ask is
+// A statechart with no model asks for approval as an agent does: its hook is
 // the pack's approval, and a job marked approve: true waits for a press from
 // someone with the approvers' scope, then runs.
 func TestStatechartAsksForApproval(t *testing.T) {
@@ -408,9 +416,12 @@ func TestStatechartAsksForApproval(t *testing.T) {
 			description: Starts the pipeline when someone writes "deploy orders".
 			lifetime: keyed
 			allow: [send:ops/pipeline]
-			ask:
-			  machine: .packs/bot/approval.yaml
-			  input: { ask: [{ at: grouse/telegram/chat/ask, in: "1" }], approvers: "messages:approve", within: 1h, asker: "${input.email}", request: "${input.text}" }
+			hooks:
+			  approval:
+			    when: "${job.approve}"
+			    before:
+			      machine: .packs/bot/approval.yaml
+			      input: { job: "${job}", ask: [{ at: grouse/telegram/chat/ask, in: "1" }], approvers: "messages:approve", within: 1h, asker: "${input.email}", request: "${input.text}" }
 			initial: waiting
 			states:
 			  waiting:
@@ -463,15 +474,11 @@ func TestApprovalQuestionIsShort(t *testing.T) {
 	write(t, dir, map[string]string{"agents/approve.yaml": "include: .packs/bot/approval.yaml"})
 	w.sync(dir)
 	w.start("agents/approve.yaml", map[string]any{
-		"asking": map[string]any{"machine": "deploys"},
-		"jobs": []any{
-			map[string]any{"name": "restart", "input": map[string]any{"vm": "web-1", "opts": map[string]any{"force": true}}},
-			map[string]any{"name": "apply", "input": map[string]any{"diff": "-a\n+b"}},
-		},
+		"job": map[string]any{"name": "apply", "run": map[string]any{"machine": "deploys"}, "input": map[string]any{"vm": "web-1", "opts": map[string]any{"force": true}, "diff": "-a\n+b"}},
 		"ask": []any{map[string]any{"at": bot + "/telegram/chat/ask", "in": "1"}}, "approvers": "messages:approve", "request": "restart web-1",
 	})
 	question := w.question(map[string]bool{})
-	want := "deploys wants to run restart, apply.\nrestart:\nopts.force: true · vm: web-1\n\napply:\ndiff:\n> -a\n> +b\n\n> restart web-1"
+	want := "deploys wants to run apply.\ndiff:\n> -a\n> +b\nopts.force: true\nvm: web-1\n\n> restart web-1"
 	if text := w.did(question.ID, "ask")[0]["text"].(string); text != want {
 		t.Errorf("the question is %q, not %q", text, want)
 	}
@@ -712,9 +719,8 @@ func TestApprovalQuestionCutsALongLine(t *testing.T) {
 	link := "https://example.com/get?" + strings.Repeat("x", 976)
 	lines := strings.Repeat("a line of a diff\n", 30)
 	w.start("agents/approve.yaml", map[string]any{
-		"asking": map[string]any{"machine": "fetcher"},
-		"jobs":   []any{map[string]any{"name": "fetch", "input": map[string]any{"url": link, "diff": lines}}},
-		"ask":    []any{map[string]any{"at": bot + "/telegram/chat/ask", "in": "1"}}, "approvers": "messages:approve",
+		"job": map[string]any{"name": "fetch", "run": map[string]any{"machine": "fetcher"}, "input": map[string]any{"url": link, "diff": lines}},
+		"ask": []any{map[string]any{"at": bot + "/telegram/chat/ask", "in": "1"}}, "approvers": "messages:approve",
 	})
 	text := w.did(w.question(map[string]bool{}).ID, "ask")[0]["text"].(string)
 	if !strings.Contains(text, "url: "+link[:150]+" … (1000 characters, the middle left out) … "+link[850:]) || strings.Contains(text, link[:151]) {
@@ -767,8 +773,7 @@ func twoPlaces(w *world, dir, a, b string) string {
 	w.sync(dir)
 	ask := func(in string) map[string]any { return map[string]any{"at": bot + "/telegram/chat/ask", "in": in} }
 	return w.start("agents/approve.yaml", map[string]any{
-		"asking":    map[string]any{"machine": "deploys"},
-		"jobs":      []any{map[string]any{"name": "restart", "input": map[string]any{"vm": "web-1"}}},
+		"job":       map[string]any{"name": "restart", "run": map[string]any{"machine": "deploys"}, "input": map[string]any{"vm": "web-1"}},
 		"ask":       []any{ask(a), ask(b)},
 		"approvers": "messages:approve",
 	})
@@ -800,7 +805,7 @@ func TestApprovalInTwoPlacesTakesTheFirstAnswer(t *testing.T) {
 	first, second := w.posted("1"), w.posted("3")
 	w.press(first.ID, "1", "yes")
 	w.until("the approval to end", func() bool { return w.show(id).HasEnded() })
-	if out := fmt.Sprint(w.show(id).Output); out != "map[approved:[restart] note:alice said yes.]" {
+	if out := fmt.Sprint(w.show(id).Output); out != "map[note:alice said yes. ok:true]" {
 		t.Fatalf("the approval gave %s", out)
 	}
 	if out := fmt.Sprint(w.show(first.ID).Output); out != "map[by:alice choice:yes]" {
@@ -816,10 +821,10 @@ func TestApprovalInTwoPlacesTakesTheFirstAnswer(t *testing.T) {
 		t.Errorf("the question answered was closed with %v", closed)
 	}
 	w.until("the ballot to end", func() bool {
-		runs := keyed(w, "ballot.yaml")[id+"/0"]
+		runs := keyed(w, "ballot.yaml")[id]
 		return len(runs) == 1 && runs[0].HasEnded()
 	})
-	if runs := keyed(w, "ballot.yaml"); len(runs) != 1 || len(runs[id+"/0"]) != 1 {
+	if runs := keyed(w, "ballot.yaml"); len(runs) != 1 || len(runs[id]) != 1 {
 		t.Errorf("the ballots are %v", runs)
 	}
 }
@@ -841,7 +846,7 @@ func TestApprovalInTwoPlacesIgnoresAPressThatDoesNotCount(t *testing.T) {
 	}
 	w.press(second.ID, "1", "no")
 	w.until("the approval to end", func() bool { return w.show(id).HasEnded() })
-	if out := fmt.Sprint(w.show(id).Output); out != "map[approved:[] note:alice said no.]" {
+	if out := fmt.Sprint(w.show(id).Output); out != "map[note:alice said no. ok:false]" {
 		t.Fatalf("the approval gave %s", out)
 	}
 	if closed := w.did(first.ID, "close"); len(closed) != 1 || closed[0]["said"] != "alice said no on Telegram." {
@@ -849,70 +854,75 @@ func TestApprovalInTwoPlacesIgnoresAPressThatDoesNotCount(t *testing.T) {
 	}
 }
 
-// An agent's held calls go to people by their toolkit or tool. The approval
-// asks about restart, of the toolkit infra, in chat 3, about tell, whose tool
-// has its own entry, in chat 1, and about open of orders, which names no
-// entry, where the approval asks; each is answered apart.
-func TestApprovalAsksByToolkitOrTool(t *testing.T) {
+// An agent's held calls go to people by the hook whose when: holds for them:
+// tell is asked about in chat 1, and every other held call in chat 3.
+func TestApprovalAsksByTheHookOfEachCall(t *testing.T) {
 	w := newWorld(t)
-	dir := approvalProject(t, w, noModel)
-	write(t, dir, map[string]string{"agents/approve.yaml": "include: .packs/bot/approval.yaml"})
-	w.sync(dir)
-	place := func(in string) []any { return []any{map[string]any{"at": bot + "/telegram/chat/ask", "in": in}} }
-	id := w.start("agents/approve.yaml", map[string]any{
-		"asking": map[string]any{"machine": "assistant"},
-		"jobs": []any{
-			map[string]any{"name": "restart", "asked": map[string]any{"tool": "restart", "toolkit": "infra", "args": map[string]any{"vm": "web-1"}}},
-			map[string]any{"name": "tell", "asked": map[string]any{"tool": "tell", "toolkit": "infra", "args": map[string]any{"chat": "2"}}},
-			map[string]any{"name": "open", "asked": map[string]any{"tool": "open", "toolkit": "orders"}},
-		},
-		"ask":       place("2"),
-		"approvers": "messages:approve",
-		"by": map[string]any{
-			"infra": map[string]any{"ask": place("3"), "within": "1h"},
-			"tell":  map[string]any{"ask": place("1")},
-		},
+	_, address := standin(t, w, func(c llmstandin.Call) llmstandin.Reply {
+		switch toolUses(c) {
+		case 0:
+			return calls("open", `{"toolkit": "messages"}`)
+		case 1:
+			return llmstandin.Reply{Calls: []llmstandin.ToolCall{
+				{ID: "x1", Name: "tell", Args: `{"chat": "3", "text": "hello"}`},
+				{ID: "x2", Name: "shout", Args: `{"chat": "3", "text": "HELLO"}`},
+			}}
+		}
+		return llmstandin.Reply{Text: "both"}
 	})
-	infra, tell, orders := w.posted("3"), w.posted("1"), w.posted("2")
-	for q, want := range map[*client.Run]string{infra: "assistant wants to run restart.", tell: "assistant wants to run tell.", orders: "assistant wants to run open."} {
+	dir := approvalProject(t, w, address)
+	agent, err := os.ReadFile(filepath.Join(dir, "agents/assistant.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	write(t, dir, map[string]string{
+		"toolkits/messages/toolkit.yaml": `
+			description: Messages to people on Telegram.
+			tools:
+			  tell:
+			    description: Write a text in a person's Telegram chat.
+			    args: { chat: string, text: string }
+			    job: { call: { at: grouse/telegram/chat/post }, input: { in: "${args.chat}", text: "${args.text}" }, allow: [send:grouse/telegram/chat/post], approve: true }
+			  shout:
+			    description: Write a loud text in a person's Telegram chat.
+			    args: { chat: string, text: string }
+			    job: { call: { at: grouse/telegram/chat/post }, input: { in: "${args.chat}", text: "${args.text}" }, allow: [send:grouse/telegram/chat/post], approve: true }
+		`,
+		"agents/assistant.yaml": hooksOf(string(agent)),
+	})
+	w.sync(dir)
+	run := w.start("agents/assistant.yaml", asking("tell carol hello, twice"))
+	tell, shout := w.posted("1"), w.posted("3")
+	for q, want := range map[*client.Run]string{tell: "assistant wants to run tell.", shout: "assistant wants to run shout."} {
 		if text := w.did(q.ID, "ask")[0]["text"].(string); !strings.HasPrefix(text, want+"\n") {
 			t.Errorf("a question asks %q", text)
 		}
 	}
-	w.press(infra.ID, "1", "yes")
 	w.press(tell.ID, "1", "no")
-	w.press(orders.ID, "1", "yes")
-	w.until("the approval to end", func() bool { return w.show(id).HasEnded() })
-	if out := fmt.Sprint(w.show(id).Output); out != "map[approved:[restart open] note:alice said yes. alice said no. alice said yes.]" {
-		t.Fatalf("the approval gave %s", out)
-	}
-	if runs := keyed(w, "ballot.yaml"); len(runs) != 3 || len(runs[id+"/0"]) != 1 || len(runs[id+"/2"]) != 1 {
-		t.Errorf("the ballots are %v", runs)
+	w.press(shout.ID, "1", "yes")
+	w.until("the agent to end", func() bool { return w.show(run).HasEnded() })
+	if got := inputs(t, w, "telegram-chat-post"); len(got) != 1 || got[0]["text"] != "HELLO" {
+		t.Errorf("the held calls ran as %v", got)
 	}
 }
 
-// An entry of by that gives a field the approval does not take, and a held
-// call left with no place to ask, approve nothing, and the error says why.
-func TestApprovalByRefusesWhatItCannotAsk(t *testing.T) {
-	w := newWorld(t)
-	dir := approvalProject(t, w, noModel)
-	write(t, dir, map[string]string{"agents/approve.yaml": "include: .packs/bot/approval.yaml"})
-	w.sync(dir)
-	restart := []any{map[string]any{"name": "restart", "asked": map[string]any{"tool": "restart", "toolkit": "infra"}}}
-	for by, want := range map[string]string{
-		`{"infra": {"approvers": "infra:approve", "in": "#infra"}}`: "by.infra gives in: an entry of by gives ask, approvers or within",
-		`{"orders": {"approvers": "orders:approve"}}`:               "No one is asked about restart: give the approval's ask and approvers, or an entry of by for its tool or toolkit",
-	} {
-		var entries map[string]any
-		if err := yaml.Unmarshal([]byte(by), &entries); err != nil {
-			t.Fatal(err)
-		}
-		id := w.start("agents/approve.yaml", map[string]any{"asking": map[string]any{"machine": "assistant"}, "jobs": restart, "by": entries})
-		w.until("the approval to end", func() bool { return w.show(id).HasEnded() })
-		if run := w.show(id); run.Status != "failed" || !strings.Contains(run.Error, want) {
-			t.Errorf("by %s: the approval ended %s: %s", by, run.Status, run.Error)
-		}
-	}
+// hooksOf gives the test agent with its one approval hook made two: tell is
+// asked about in chat 1, and every other held call in chat 3.
+func hooksOf(agent string) string {
+	at := strings.Index(agent, "hooks:\n")
+	end := strings.Index(agent, "toolkits:\n")
+	return agent[:at] + `hooks:
+  tell:
+    when: "${job.approve && job.tool.name == 'tell'}"
+    before:
+      machine: .packs/bot/approval.yaml
+      input: { job: "${job}", ask: [{ at: grouse/telegram/chat/ask, in: "1" }], approvers: messages:approve }
+  loud:
+    when: "${job.approve && job.tool.name != 'tell'}"
+    before:
+      machine: .packs/bot/approval.yaml
+      input: { job: "${job}", ask: [{ at: grouse/telegram/chat/ask, in: "3" }], approvers: messages:approve }
+` + agent[end:]
 }
 
 // A place whose question cannot be posted fails alone: the other question
@@ -936,7 +946,7 @@ func TestApprovalPlaceThatFailsLeavesTheOthersAsking(t *testing.T) {
 	}
 	w.press(question.ID, "1", "yes")
 	w.until("the approval to end", func() bool { return w.show(id).HasEnded() })
-	if run := w.show(id); run.Status != "done" || fmt.Sprint(run.Output) != "map[approved:[restart] note:alice said yes.]" {
+	if run := w.show(id); run.Status != "done" || fmt.Sprint(run.Output) != "map[note:alice said yes. ok:true]" {
 		t.Fatalf("the approval ended %s with %v: %s", run.Status, run.Output, run.Error)
 	}
 }
@@ -952,5 +962,22 @@ func TestApprovalNoPlaceAskedIsNo(t *testing.T) {
 	note, _ := run.Output.(map[string]any)["note"].(string)
 	if run.Status != "done" || !strings.HasPrefix(note, "The question could not be asked: ") || !strings.Contains(note, "chat 8 is gone") || !strings.Contains(note, "chat 9 is gone") {
 		t.Fatalf("the approval ended %s with %v", run.Status, run.Output)
+	}
+}
+
+// An approval whose ask names no place approves nothing and says why.
+func TestApprovalWithNoPlaceIsNo(t *testing.T) {
+	w := newWorld(t)
+	dir := approvalProject(t, w, noModel)
+	write(t, dir, map[string]string{"agents/approve.yaml": "include: .packs/bot/approval.yaml"})
+	w.sync(dir)
+	id := w.start("agents/approve.yaml", map[string]any{
+		"job":       map[string]any{"name": "restart", "run": map[string]any{"machine": "deploys"}},
+		"ask":       []any{},
+		"approvers": "messages:approve",
+	})
+	w.until("the approval to end", func() bool { return w.show(id).HasEnded() })
+	if run := w.show(id); run.Status != "done" || fmt.Sprint(run.Output) != "map[note:No one was asked: the approval's ask names no place. ok:false]" {
+		t.Fatalf("the approval ended %s with %v: %s", run.Status, run.Output, run.Error)
 	}
 }

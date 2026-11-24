@@ -1,5 +1,5 @@
 # The messages toolkit: a text to someone's Telegram chat, which waits for the
-# agent's ask.
+# agent's hook.
 description: Messages to people on Telegram.
 instructions: Write to a person only when the asker asks you to.
 tools:

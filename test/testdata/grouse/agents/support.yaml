@@ -1,8 +1,8 @@
 # The agent the conversation calls for each turn. It offers orders to a person
 # whose scopes hold orders:read, and infra to one whose scopes hold infra:read.
-# A held call of orders waits for a yes in #orders-team from someone with
-# orders:approve who did not ask, for a day; one of infra in #infra from
-# someone with infra:approve, for an hour. No press in time is no.
+# A held call waits for a yes in the channel its tool's meta: names, from
+# someone with the scope it names who did not ask, for as long as it names.
+# No press in time is no.
 agent: support
 description: Answers questions in #support, in direct messages and on orders issues.
 include: .packs/bot/agent.yaml
@@ -10,14 +10,18 @@ model: { name: claude-sonnet-5-5, service: anthropic, secret: ANTHROPIC_KEY }
 system:
   - { include: ./support.md }
   - ${input.format}
-ask:
-  machine: .packs/bot/approval.yaml
-  input:
-    asker: "${input.asker.email}"
-    request: "${input.messages.map((m) => (m.later != null ? '(a reminder the bot set) ' : '') + m.text).join('\\n')}"
-    by:
-      orders: { ask: [{ at: grouse/slack/chat/ask, in: "#orders-team" }], approvers: "orders:approve", within: 1d }
-      infra: { ask: [{ at: grouse/slack/chat/ask, in: "#infra" }], approvers: "infra:approve", within: 1h }
+hooks:
+  approval:
+    when: "${job.approve}"
+    before:
+      machine: .packs/bot/approval.yaml
+      input:
+        job: "${job}"
+        ask: [{ at: grouse/slack/chat/ask, in: "${job.meta.channel}" }]
+        approvers: "${job.meta.approvers}"
+        within: "${job.meta.within || '7d'}"
+        asker: "${input.asker.email}"
+        request: "${input.messages.map((m) => (m.later != null ? '(a reminder the bot set) ' : '') + m.text).join('\\n')}"
 toolkits:
   orders: { include: toolkits/orders/toolkit.yaml, when: "${input.asker.scopes.includes('orders:read')}" }
   infra: { include: toolkits/infra/toolkit.yaml, when: "${input.asker.scopes.includes('infra:read')}" }
