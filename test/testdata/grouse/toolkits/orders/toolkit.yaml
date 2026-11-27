@@ -5,10 +5,4 @@ toolkit: orders
 description: The orders app. How it is deployed, and its settings.
 instructions: { include: ./orders.md }
 tools:
-  read_file:
-    description: Reads a file of the orders app's repository as text.
-    args: { path: string, ref: "string?" }
-    job:
-      call: { at: grouse/gitlab/repository/files/read }
-      input: "${({ ...args, project: 'group/orders' })}"
-      allow: [send:grouse/gitlab/repository/files/read]
+  read_file: { call: grouse/gitlab/repository/files/read, input: { project: group/orders } }

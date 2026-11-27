@@ -782,10 +782,7 @@ const slackMessages = `
 	description: Messages to people on Slack.
 	instructions: Write to a person only when the asker asks you to.
 	tools:
-	  tell:
-	    description: Write a text to a person on Slack, by their member ID.
-	    args: { in: string, text: string }
-	    job: { call: { at: grouse/slack/chat/post }, input: "${args}", allow: [send:grouse/slack/chat/post], approve: true }
+	  tell: { call: grouse/slack/chat/post, approve: true }
 `
 
 // bob asks on Slack for a held tool. The approval asks in #approvals with

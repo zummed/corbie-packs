@@ -218,13 +218,7 @@ To add the agent:
     description: The orders app, and its settings.
     instructions: { include: ./orders.md }
     tools:
-      read_file:
-        description: Reads a file of the orders app's repository as text.
-        args: { path: string, ref: "string?" }
-        job:
-          call: { at: grouse/gitlab/repository/files/read }
-          input: "${({ ...args, project: 'group/orders' })}"
-          allow: [send:grouse/gitlab/repository/files/read]
+      read_file: { call: grouse/gitlab/repository/files/read, input: { project: group/orders } }
 
     # toolkits/orders/orders.md
     The orders app is built from the repository group/orders. Its settings are
@@ -240,12 +234,12 @@ To add the agent:
 - Ana is offered `orders` and `change_file`. Di is offered `orders` only, since she lacks `orders:write`, and her press on a question counts, since she holds `orders:approve`.
 - A person `people/scopes.yaml` does not hold is answered by the agent with no toolkit, and the log of that run of `people/find` names the email and the ID it looked for: `corbie run show <id> --record`.
 - The model is given `instructions:` when it opens the toolkit, and is then shown its tool as `orders_read_file`.
-- An entry of the agent written `call:`, as `change_file`, takes its description and arguments from the machine at its location, without the names its `input:` fixes, so the model never names the project. A schedule, another machine or a client can run that machine without the agent.
-- A toolkit's tool writes its own `description:` and `args:`. `read_file` fixes the project in its job's `input:`.
+- A tool written `call:` takes its description and arguments from the machine at its location, without the names its `input:` fixes, so the model never names the project. A schedule, another machine or a client can run that machine without the agent.
+- A tool inside a toolkit takes no `when:`, so `change_file`, which only some people are offered, is an entry of the agent.
 - A toolkit's file is a machine, as is each machine in its directory, at the location its path gives, such as `toolkits/infra/restart`.
 - A tool that uses no secret is written in place in the toolkit's file, which costs one file and one run less, and runs at the agent's location. A tool that uses a secret is a machine in the toolkit's directory, called with `call:`, with the secret set at its location or the toolkit's directory, as `--at /my-bot/toolkits/infra`, so the agent's run cannot read it.
-- `change_file` has `approve: true`, so it waits for the agent's hook, the approval, until someone with `orders:approve`, who did not ask, presses yes in `#orders-team`. The channel, the scope and the wait are the entry's `meta:`, which the hook reads as `job.meta`. A no, or no press within a day, goes back to the model as `denied`.
-- A toolkit's tool waits for the same hook with `approve: true` and `meta:` in its `job:`.
+- `change_file` has `approve: true`, so it waits for the agent's hook, the approval, until someone with `orders:approve`, who did not ask, presses yes in `#orders-team`. The channel, the scope and the wait are its `meta:`, which the hook reads as `job.meta`. A no, or no press within a day, goes back to the model as `denied`.
+- A toolkit's tool waits for the same hook with its own `approve: true` and `meta:`.
 - Any machine at `agents/assistant` with the same input and output answers in its place, a flow with no model included, as `.packs/bot/pages/bot-design.txt` says under The agent.
 
 Common changes

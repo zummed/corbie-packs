@@ -117,7 +117,7 @@ A sender needs `send:` for the location in its `allow:`.
   .packs/bot/agent.yaml         in its tool progress, send:*/*/chat/post; in its tool later, send:later
   .packs/bot/later.yaml         send: for the conversation the agent's input names
   .packs/shared/press.yaml      send: for the question's lookup
-  an agent's entry              an entry written call: holds send: for its location; a tool's job writes its own allow:
+  a toolkit's tool              a tool written call: holds send: for its location; a job writes its own allow:
 
 - The lookup's answer is trusted because only the conversation calls the agent, only a router and `later` send to the conversation, and a router takes events only from its listener.
 - A reminder acts for the person of the turn that set it: the tool `later` fixes the message's service, chat and user and the conversation's run from the agent's input, and the model chooses only the minutes and the note.
@@ -362,9 +362,9 @@ at once in a project, and a stop does not cancel one.
 An agent names each toolkit under `tools:`, as `machine: <its file>`, with a
 `when:` on the agent's input, so only a person whose scopes allow it is
 offered one. A toolkit's run is a child of the agent's, so the agent's hooks
-are for its tools' jobs. An entry written `call: <location>` is one tool,
-which takes its description and arguments from that machine and fixes any of
-its input. `.packs/bot/pages/bot-project.txt` shows an agent and its toolkit,
+are for its tools' jobs. A tool written `call: <location>`, in a toolkit or
+as an entry of the agent, takes its description and arguments from that
+machine and fixes any of its input. `.packs/bot/pages/bot-project.txt` shows an agent and its toolkit,
 in a directory of its own, under Add an agent.
 
 The lookup
@@ -506,8 +506,8 @@ presses yes.
 The packs' calls
 ------------
 
-Each of the packs' calls has a `description:` and an `input:`, so an entry of
-an agent's `tools:` can name it with `call:`. A project places one with a file of one line,
+Each of the packs' calls has a `description:` and an `input:`, so a toolkit's
+tool can name it with `call:`. A project places one with a file of one line,
 as `grouse/gitlab/pipeline/create.yaml` above, and any machine of the project
 may call it with `send:` for it in its `allow:`.
 

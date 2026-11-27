@@ -4,16 +4,5 @@ toolkit: infra
 description: The servers. Their state, and restarting one.
 instructions: { include: ./infra.md }
 tools:
-  vm_status:
-    description: The state of every virtual machine.
-    args: {}
-    job: { call: { at: toolkits/infra/status }, allow: [send:toolkits/infra/status] }
-  restart:
-    description: Restart one virtual machine by its name, as orders-2.
-    args: { name: string }
-    job:
-      call: { at: toolkits/infra/restart }
-      input: "${args}"
-      allow: [send:toolkits/infra/restart]
-      approve: true
-      meta: { channel: "#infra", approvers: "infra:approve", within: 1h }
+  vm_status: { call: toolkits/infra/status }
+  restart: { call: toolkits/infra/restart, approve: true, meta: { channel: "#infra", approvers: "infra:approve", within: 1h } }

@@ -416,7 +416,7 @@ func TestGrouseOneQuestionRunByRun(t *testing.T) {
 		t.Errorf("opening infra gave %v", got)
 	}
 	tools := shown(cy[1])
-	if tools["infra_vm_status"] == nil || tools["infra_restart"] == nil || !slices.Equal(arguments(tools["infra_restart"]), []string{"name"}) || tools["infra_restart"]["description"] != "Restart one virtual machine by its name, as orders-2." {
+	if tools["infra_vm_status"] == nil || tools["infra_restart"] == nil || !slices.Equal(arguments(tools["infra_restart"]), []string{"name"}) || tools["infra_restart"]["description"] != "Restart one virtual machine by its name." {
 		t.Errorf("after opening infra the model was shown %v", tools)
 	}
 	if got := results(cy[2]); !strings.Contains(got[1], "orders-2") || !strings.Contains(got[1], "stuck") {

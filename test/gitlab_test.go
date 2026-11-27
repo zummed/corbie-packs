@@ -1012,10 +1012,7 @@ func TestGitLabToolFixesTheProject(t *testing.T) {
 			toolkit: orders
 			description: The orders app.
 			tools:
-			  read_file:
-			    description: Reads a file of the orders app's repository as text.
-			    args: { path: string, ref: "string?" }
-			    job: { call: { at: grouse/gitlab/repository/files/read }, input: "${({ ...args, project: 'group/orders' })}", allow: [send:grouse/gitlab/repository/files/read] }
+			  read_file: { call: grouse/gitlab/repository/files/read, input: { project: group/orders } }
 		`,
 	})
 	gitlabProject(t, w, gl, "", files)
@@ -1030,7 +1027,7 @@ func TestGitLabToolFixesTheProject(t *testing.T) {
 	}
 	schema, _ := offered["input_schema"].(map[string]any)
 	properties, _ := schema["properties"].(map[string]any)
-	if offered["description"] != "Reads a file of the orders app's repository as text." || properties["project"] != nil || properties["path"] == nil {
+	if offered["description"] != "Reads a file of a GitLab project's repository as text." || properties["project"] != nil || properties["path"] == nil {
 		t.Errorf("orders_read_file was offered as %v", offered)
 	}
 	if shown := last(model.Calls[2]); !strings.Contains(shown, `replicas: 2`) {
