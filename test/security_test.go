@@ -72,16 +72,16 @@ func TestTwoPeopleInOneThreadKeepToolResultsApart(t *testing.T) {
 		}
 		switch toolUses(c) {
 		case 0:
-			return llmstandin.Reply{Calls: []llmstandin.ToolCall{{ID: "o1", Name: "open", Args: `{"toolkit": "vault"}`}}}
+			return llmstandin.Reply{Calls: []llmstandin.ToolCall{{ID: "o1", Name: "open", Args: `{"list": "toolkits", "name": "vault"}`}}}
 		case 1:
-			return llmstandin.Reply{Calls: []llmstandin.ToolCall{{ID: "p1", Name: "peek", Args: `{}`}}}
+			return llmstandin.Reply{Calls: []llmstandin.ToolCall{{ID: "p1", Name: "vault_peek", Args: `{}`}}}
 		}
 		return llmstandin.Reply{Text: "done for alice"}
 	})
 	write(t, dir, map[string]string{
-		"agents/assistant.yaml": modelAgent("assistant", url, "toolkits:\n  vault: { include: toolkits/vault/toolkit.yaml }\n"),
-		".corbieignore":         ignoring(t, "vault"),
+		"agents/assistant.yaml": modelAgent("assistant", url, "tools:\n  vault: { machine: toolkits/vault/toolkit.yaml }\n"),
 		"toolkits/vault/toolkit.yaml": `
+			toolkit: vault
 			description: Notes.
 			tools:
 			  peek:
@@ -139,9 +139,9 @@ func TestToolkitIsNotOfferedWithoutItsScope(t *testing.T) {
 	model, url := standin(t, w, func(c llmstandin.Call) llmstandin.Reply {
 		switch toolUses(c) {
 		case 0:
-			return llmstandin.Reply{Calls: []llmstandin.ToolCall{{ID: "o1", Name: "open", Args: `{"toolkit": "messages"}`}}}
+			return llmstandin.Reply{Calls: []llmstandin.ToolCall{{ID: "o1", Name: "open", Args: `{"list": "toolkits", "name": "messages"}`}}}
 		case 1:
-			return llmstandin.Reply{Calls: []llmstandin.ToolCall{{ID: "t1", Name: "tell", Args: `{"chat": "1", "text": "pwned"}`}}}
+			return llmstandin.Reply{Calls: []llmstandin.ToolCall{{ID: "t1", Name: "messages_tell", Args: `{"chat": "1", "text": "pwned"}`}}}
 		case 2:
 			return llmstandin.Reply{Calls: []llmstandin.ToolCall{{ID: "t2", Name: "messages_tell", Args: `{"chat": "1", "text": "pwned"}`}}}
 		}
@@ -189,11 +189,11 @@ func TestToolkitNotGivenCannotBeUsed(t *testing.T) {
 	model, url := standin(t, w, func(c llmstandin.Call) llmstandin.Reply {
 		switch toolUses(c) {
 		case 0:
-			return llmstandin.Reply{Calls: []llmstandin.ToolCall{{ID: "t1", Name: "tell", Args: `{"chat": "2", "text": "early"}`}}}
+			return llmstandin.Reply{Calls: []llmstandin.ToolCall{{ID: "t1", Name: "messages_tell", Args: `{"chat": "2", "text": "early"}`}}}
 		case 1:
-			return llmstandin.Reply{Calls: []llmstandin.ToolCall{{ID: "o1", Name: "open", Args: `{"toolkit": "admin"}`}}}
+			return llmstandin.Reply{Calls: []llmstandin.ToolCall{{ID: "o1", Name: "open", Args: `{"list": "toolkits", "name": "admin"}`}}}
 		case 2:
-			return llmstandin.Reply{Calls: []llmstandin.ToolCall{{ID: "o2", Name: "open", Args: `{"toolkit": "../toolkits/messages"}`}}}
+			return llmstandin.Reply{Calls: []llmstandin.ToolCall{{ID: "o2", Name: "open", Args: `{"list": "toolkits", "name": "../toolkits/messages"}`}}}
 		}
 		return llmstandin.Reply{Text: "finished"}
 	})

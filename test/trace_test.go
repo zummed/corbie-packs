@@ -66,10 +66,11 @@ func traceHelper(address, system string) map[string]string {
 			    before:
 			      machine: .packs/bot/approval.yaml
 			      input: { job: "${job}", ask: [{ at: grouse/telegram/chat/ask, in: "1" }], approvers: "messages:approve" }
-			toolkits:
-			  messages: { include: toolkits/messages/toolkit.yaml }
+			tools:
+			  messages: { machine: toolkits/messages/toolkit.yaml }
 		`,
 		"toolkits/messages/toolkit.yaml": `
+			toolkit: messages
 			description: Messages to the people this bot knows, and the time.
 			tools:
 			  clock:
@@ -93,9 +94,9 @@ func traceHelper(address, system string) map[string]string {
 // clock and tells bob.
 func openClockTell() []llmstandin.ToolCall {
 	return []llmstandin.ToolCall{
-		{Name: "open", Args: `{"toolkit": "messages"}`},
-		{Name: "clock", Args: `{"zone": "UTC"}`},
-		{Name: "tell", Args: `{"chat": "2", "text": "the build is green"}`},
+		{Name: "open", Args: `{"list": "toolkits", "name": "messages"}`},
+		{Name: "messages_clock", Args: `{"zone": "UTC"}`},
+		{Name: "messages_tell", Args: `{"chat": "2", "text": "the build is green"}`},
 	}
 }
 
@@ -156,6 +157,19 @@ func (w *world) arrived(id, name, job string) []any {
 	return out
 }
 
+// child gives the child run a run started for the job of a name, such as the
+// run of a toolkit for the call messages_tell.
+func (w *world) child(id, job string) string {
+	w.t.Helper()
+	for _, a := range w.ownAsks(id, instance.AskChild) {
+		if a.Name == job {
+			return a.Child
+		}
+	}
+	w.t.Fatalf("the run %s started no child for the job %s", id, job)
+	return ""
+}
+
 // ownAsks gives what a run's own steps asked for, of one kind.
 func (w *world) ownAsks(id, kind string) []instance.Ask {
 	var out []instance.Ask
@@ -191,9 +205,10 @@ func lastOf(t *testing.T, what string, runs []string) string {
 
 // The trail of one message that leads to two tools and an approval: a person
 // can go from the router to the conversation, from the conversation to its
-// turn, from the turn to the agent, and from the agent to each tool's name,
-// input and result, the held call, its approval and the question that
-// approval asked, and see who answered it.
+// turn, from the turn to the agent, from the agent to each call of a
+// toolkit's tool, and in the toolkit's run to the tool's input and result, the
+// held call, its approval and the question that approval asked, and see who
+// answered it.
 func TestTraceMessageToToolsAndApproval(t *testing.T) {
 	w := newWorld(t)
 	dir, _ := traceProject(t, w, from("1", "tell bob the build is green", 10))
@@ -227,11 +242,14 @@ func TestTraceMessageToToolsAndApproval(t *testing.T) {
 			names = append(names, fmt.Sprint(c["name"], c["args"]))
 		}
 	}
-	if want := []string{"openmap[toolkit:messages]", "clockmap[zone:UTC]", "tellmap[chat:2 text:the build is green]"}; !slices.Equal(names, want) {
+	if want := []string{"openmap[list:toolkits name:messages]", "messages_clockmap[zone:UTC]", "messages_tellmap[chat:2 text:the build is green]"}; !slices.Equal(names, want) {
 		t.Errorf("the model's calls in the record are %q", names)
 	}
+	// Each call of a toolkit's tool is a child run of the toolkit, whose
+	// record holds the tool's job.
+	clock := w.child(agent, "messages_clock")
 	var clockInput any
-	for _, a := range w.ownAsks(agent, instance.AskScript) {
+	for _, a := range w.ownAsks(clock, instance.AskScript) {
 		if a.Name == "clock" {
 			clockInput = a.Job.Input
 		}
@@ -239,25 +257,27 @@ func TestTraceMessageToToolsAndApproval(t *testing.T) {
 	if fmt.Sprint(clockInput) != "map[zone:UTC]" {
 		t.Errorf("the clock's input in the record is %v", clockInput)
 	}
-	if got := w.arrived(agent, "done", "clock"); len(got) != 1 || fmt.Sprint(got[0]) != "map[time:12:00 zone:UTC]" {
+	if got := w.arrived(clock, "done", "clock"); len(got) != 1 || fmt.Sprint(got[0]) != "map[time:12:00 zone:UTC]" {
 		t.Errorf("the clock's result in the record is %v", got)
 	}
-	held := w.ownAsks(agent, instance.AskHold)
+	if got := w.arrived(agent, "done", "messages_clock"); len(got) != 1 || fmt.Sprint(got[0]) != "map[result:map[time:12:00 zone:UTC]]" {
+		t.Errorf("the agent was given the clock's result as %v", got)
+	}
+	toolkit := w.child(agent, "messages_tell")
+	if run := w.show(toolkit); run.Machine != "messages" || run.Parent != agent {
+		t.Errorf("the toolkit's run is %+v", run)
+	}
+	held := w.ownAsks(toolkit, instance.AskHold)
 	if len(held) != 1 || held[0].Name != "tell" {
 		t.Errorf("the held calls are %+v", held)
 	}
-	told := lastOf(t, "tell's call", w.sentFrom(agent, instance.AskCall, location(bot+"/telegram/chat/post")))
+	told := lastOf(t, "tell's call", w.sentFrom(toolkit, instance.AskCall, location(bot+"/telegram/chat/post")))
 	if in := fmt.Sprint(w.show(told).Input); in != "map[in:2 text:the build is green]" {
 		t.Errorf("tell's call was given %s", in)
 	}
-	var approval string
-	for _, a := range w.ownAsks(agent, instance.AskChild) {
-		if a.Name == "tell.approval" {
-			approval = a.Child
-		}
-	}
-	if got := w.arrived(agent, "done", "tell.approval"); len(got) != 1 || fmt.Sprint(got[0]) != "map[note:alice said yes. ok:true]" {
-		t.Errorf("the approval gave the agent %v", got)
+	approval := w.child(toolkit, "tell.approval")
+	if got := w.arrived(toolkit, "done", "tell.approval"); len(got) != 1 || fmt.Sprint(got[0]) != "map[note:alice said yes. ok:true]" {
+		t.Errorf("the approval gave the toolkit %v", got)
 	}
 	// 4. approval -> question, and who answered it
 	if run := w.show(approval); run.Machine != "approval" || run.Title != "Approve tell" {
@@ -287,7 +307,7 @@ func TestTraceMessageToToolsAndApproval(t *testing.T) {
 	// prints for these runs.
 	recordsAsThePageShows(t, w, map[string]string{
 		"router": router, "conversation": conversation, "turn": turn, "agent": agent,
-		"approval": approval, "place": place, "question": asked, "press": press, "tell": told,
+		"toolkit": toolkit, "approval": approval, "place": place, "question": asked, "press": press, "tell": told,
 		"find": lastOf(t, "lookup", w.sentFrom(turn, instance.AskCall, location("people/find"))),
 	})
 }
@@ -490,8 +510,8 @@ func TestDeletedAgentWhileQuestionWaits(t *testing.T) {
 	}
 }
 
-// A tool that fails is followed: the agent's record shows the tool's failure
-// with its error, and the model is given it.
+// A tool that fails is followed: the record of the toolkit's run shows the
+// tool's failure with its error, and the model is given it.
 func TestFailedToolIsFollowed(t *testing.T) {
 	w := newWorld(t)
 	dir, model := traceProject(t, w, from("1", "what time is it", 10))
@@ -499,7 +519,7 @@ func TestFailedToolIsFollowed(t *testing.T) {
 	w.sync(dir)
 	w.until("a question", func() bool { return len(questions(w)) == 1 })
 	agent := stubs(t, w, "assistant")[0].ID
-	failed := fmt.Sprint(w.arrived(agent, "failed", "clock"))
+	failed := fmt.Sprint(w.arrived(w.child(agent, "messages_clock"), "failed", "clock"))
 	if !strings.Contains(failed, "the clock is broken") {
 		t.Errorf("the record shows the clock's failure as %s", failed)
 	}
@@ -610,7 +630,7 @@ func TestTrailWalksBackwardsFromTheQuestion(t *testing.T) {
 		}
 		id = next
 	}
-	want := []string{"chat-ask", "place", "approval", "assistant", "turn", "conversation", "grouse"}
+	want := []string{"chat-ask", "place", "approval", "messages", "assistant", "turn", "conversation", "grouse"}
 	if !slices.Equal(chain, want) {
 		t.Errorf("walking back from the question gives %v", chain)
 	}

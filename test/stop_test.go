@@ -27,6 +27,7 @@ const hourMachine = `
 
 // slowToolkit is a toolkit with one tool, wait, which takes an hour.
 const slowToolkit = `
+	toolkit: slow
 	description: Waiting.
 	tools:
 	  wait:
@@ -44,9 +45,9 @@ func stopModel(c llmstandin.Call) llmstandin.Reply {
 	}
 	switch len(results) {
 	case 0:
-		return calls("open", `{"toolkit": "slow"}`)
+		return calls("open", `{"list": "toolkits", "name": "slow"}`)
 	case 1:
-		return calls("wait", `{}`)
+		return calls("slow_wait", `{}`)
 	}
 	return llmstandin.Reply{Text: "waited"}
 }
@@ -57,11 +58,10 @@ func stopProject(t *testing.T, w *world, tg *telegram) string {
 	t.Helper()
 	_, address := standin(t, w, stopModel)
 	return chatProject(t, w, tg, map[string]string{
-		"agents/assistant.yaml":       modelAgent("assistant", address, houseAsk+"toolkits:\n  house: { include: toolkits/house/toolkit.yaml }\n  slow: { include: toolkits/slow/toolkit.yaml }\n"),
+		"agents/assistant.yaml":       modelAgent("assistant", address, houseAsk+"tools:\n  house: { machine: toolkits/house/toolkit.yaml }\n  slow: { machine: toolkits/slow/toolkit.yaml }\n"),
 		"toolkits/house/toolkit.yaml": houseToolkit,
 		"toolkits/house/lights.js":    `return { on: ["kitchen", "hall"] }`,
 		"toolkits/slow/toolkit.yaml":  slowToolkit,
-		".corbieignore":               ignoring(t, "house", "slow"),
 	})
 }
 

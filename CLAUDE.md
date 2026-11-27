@@ -49,7 +49,7 @@ Words:
 - No metaphor and no soft verbs. Not "decides", "reaches", "touches", "meets", "holds on to", "is owed", "stands", "says so". Not "unless it says": write "by default".
 - One word for one thing, the same in the docs, the code and what is printed. A word with two meanings is a fault, and so is a second word for the same thing. A word is changed everywhere or not at all.
 - Corbie's words are the packs' words. These are settled:
-  - **machine**: a YAML definition of type flow, statechart, agent or decision. Never a computer.
+  - **machine**: a YAML definition of type flow, statechart, agent, decision or toolkit. Never a computer.
   - **job**: the `job:` block of a stage, a state or a tool, and the `before:` or `after:` of a hook. A job is a script, a machine, or a send. A machine is named by its file (`machine:`) or by its location (`call:`), and a send delivers an event and returns nothing. A runner executes a script; a machine named by its file runs as a child run, and one named by its location as a run of its own whose result is the job's output.
   - **hook**: a job a definition names under `hooks:`, which runs before or after other jobs.
   - **run**: one execution of a machine, which a client starts, lists and shows.
@@ -58,7 +58,7 @@ Words:
 - The packs' own words are settled too:
   - **service**: Telegram, Slack, GitLab or Jira, and its directory `<bot>/<service>/`. Never "bridge".
   - **router**, **listener**, **conversation**, **lookup**, **approval**, **question** (a bot's `chat/ask`), **scope**.
-  - **toolkit**, never "part"; **description**, never "does"; **listed file**, a file `.corbieignore` lists, never "piece".
+  - **toolkit**, a machine of type toolkit, never "part"; **entry**, an item of an agent's `tools:`; **description**, never "does"; **listed file**, a file `.corbieignore` lists, never "piece".
 - A page does not use words that only the code needs: pass, wake, mark, head, receipt, party. It says what happens instead.
 
 Sentences:

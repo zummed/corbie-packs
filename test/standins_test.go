@@ -1710,8 +1710,8 @@ func TestAgentIsToldTheThread(t *testing.T) {
 	}
 	// Slack gives alice's email, by which people/scopes.yaml gives her the
 	// scope messages, and so the toolkit.
-	if tools := fmt.Sprint(model.Calls[0].Tools); !strings.Contains(tools, "messages: Messages to people on Telegram.") {
-		t.Errorf("the toolkit messages is not offered among the tools %s", tools)
+	if !strings.Contains(shown, `"description":"Messages to people on Telegram.","name":"messages"`) {
+		t.Errorf("the toolkit messages is not among the toolkits the model can open: %s", shown)
 	}
 }
 

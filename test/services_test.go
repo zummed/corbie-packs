@@ -778,10 +778,14 @@ func TestSlackLongAnswerIsNotSaidTwice(t *testing.T) {
 // slackMessages is a toolkit whose one tool posts on Slack, and waits for the
 // agent's hook.
 const slackMessages = `
+	toolkit: messages
 	description: Messages to people on Slack.
 	instructions: Write to a person only when the asker asks you to.
 	tools:
-	  tell: { call: grouse/slack/chat/post, approve: true }
+	  tell:
+	    description: Write a text to a person on Slack, by their member ID.
+	    args: { in: string, text: string }
+	    job: { call: { at: grouse/slack/chat/post }, input: "${args}", allow: [send:grouse/slack/chat/post], approve: true }
 `
 
 // bob asks on Slack for a held tool. The approval asks in #approvals with
@@ -804,8 +808,8 @@ func TestSlackApprovalByButtonCanBeFollowed(t *testing.T) {
 		"agents/assistant.yaml":          strings.Replace(string(agent), `ask: [{ at: grouse/telegram/chat/ask, in: "1" }]`, `ask: [{ at: grouse/slack/chat/ask, in: "#approvals" }]`, 1),
 	})
 	replies := []llmstandin.Reply{
-		{Calls: []llmstandin.ToolCall{{ID: "c1", Name: "open", Args: `{"toolkit": "messages"}`}}},
-		{Calls: []llmstandin.ToolCall{{ID: "c2", Name: "tell", Args: `{"in": "U2", "text": "hello bob"}`}}},
+		{Calls: []llmstandin.ToolCall{{ID: "c1", Name: "open", Args: `{"list": "toolkits", "name": "messages"}`}}},
+		{Calls: []llmstandin.ToolCall{{ID: "c2", Name: "messages_tell", Args: `{"in": "U2", "text": "hello bob"}`}}},
 		{Text: "told"},
 	}
 	var mu sync.Mutex
@@ -867,10 +871,21 @@ func TestSlackApprovalByButtonCanBeFollowed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The held call is a job of the toolkit's run, a child of the agent's,
+	// and the approval is a child of that run.
 	var approval string
 	for _, run := range runs {
-		if run.Machine == "approval" {
-			approval = run.ID
+		if run.Machine != "messages" {
+			continue
+		}
+		inside, err := w.List(context.Background(), client.Filter{Parent: run.ID, Finished: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, child := range inside {
+			if child.Machine == "approval" {
+				approval = child.ID
+			}
 		}
 	}
 	if approval == "" || len(sent(agents[0].Run, instance.AskCall, location(bot+"/slack/chat/post"))) != 1 {
@@ -956,6 +971,7 @@ func TestEveryServiceAtOnce(t *testing.T) {
 // slackApprovedToolkit is a toolkit whose tell posts on Slack, held for the
 // agent's hook.
 const slackApprovedToolkit = `
+	toolkit: slack
 	description: Messages to people on Slack.
 	tools:
 	  tell:
@@ -979,18 +995,17 @@ func TestGitLabRequestApprovedOnSlack(t *testing.T) {
 	_, url := standin(t, w, func(c llmstandin.Call) llmstandin.Reply {
 		switch toolUses(c) {
 		case 0:
-			return calls("open", `{"toolkit": "slack"}`)
+			return calls("open", `{"list": "toolkits", "name": "slack"}`)
 		case 1:
-			return calls("tell", `{"to": "U2", "text": "hello bob"}`)
+			return calls("slack_tell", `{"to": "U2", "text": "hello bob"}`)
 		}
 		return llmstandin.Reply{Text: "told"}
 	})
 	write(t, dir, map[string]string{
 		// The agent's hook is a yes on Slack, in alice's direct message, from
 		// someone who holds messages:approve.
-		"agents/assistant.yaml":       modelAgent("assistant", url, "hooks:\n  approval:\n    when: \"${job.approve}\"\n    before:\n      machine: .packs/bot/approval.yaml\n      input: { job: \"${job}\", ask: [{ at: grouse/slack/chat/ask, in: U1 }], approvers: \"messages:approve\", request: \"${input.messages.map((m) => m.text).join('\\\\n')}\" }\ntoolkits:\n  slack: { include: toolkits/slack/toolkit.yaml }\n"),
+		"agents/assistant.yaml":       modelAgent("assistant", url, "hooks:\n  approval:\n    when: \"${job.approve}\"\n    before:\n      machine: .packs/bot/approval.yaml\n      input: { job: \"${job}\", ask: [{ at: grouse/slack/chat/ask, in: U1 }], approvers: \"messages:approve\", request: \"${input.messages.map((m) => m.text).join('\\\\n')}\" }\ntools:\n  slack: { machine: toolkits/slack/toolkit.yaml }\n"),
 		"toolkits/slack/toolkit.yaml": slackApprovedToolkit,
-		".corbieignore":               ignoring(t, "slack"),
 	})
 	w.sync(dir)
 	w.until("Slack connected", s.connected)

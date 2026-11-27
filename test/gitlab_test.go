@@ -999,20 +999,23 @@ func TestGitLabToolFixesTheProject(t *testing.T) {
 	model, address := standin(t, w, func(c llmstandin.Call) llmstandin.Reply {
 		switch c.Turn {
 		case 1:
-			return calls("open", `{"toolkit": "orders"}`)
+			return calls("open", `{"list": "toolkits", "name": "orders"}`)
 		case 2:
-			return calls("read_file", `{"path": "app.yaml"}`)
+			return calls("orders_read_file", `{"path": "app.yaml"}`)
 		}
 		return llmstandin.Reply{Text: "read"}
 	})
 	files := maps.Clone(placedCalls)
 	maps.Copy(files, map[string]string{
-		"agents/assistant.yaml": modelAgent("assistant", address, "toolkits:\n  orders: { include: toolkits/orders/toolkit.yaml }\n"),
-		".corbieignore":         ignoring(t, "orders"),
+		"agents/assistant.yaml": modelAgent("assistant", address, "tools:\n  orders: { machine: toolkits/orders/toolkit.yaml }\n"),
 		"toolkits/orders/toolkit.yaml": `
+			toolkit: orders
 			description: The orders app.
 			tools:
-			  read_file: { call: grouse/gitlab/repository/files/read, input: { project: group/orders } }
+			  read_file:
+			    description: Reads a file of the orders app's repository as text.
+			    args: { path: string, ref: "string?" }
+			    job: { call: { at: grouse/gitlab/repository/files/read }, input: "${({ ...args, project: 'group/orders' })}", allow: [send:grouse/gitlab/repository/files/read] }
 		`,
 	})
 	gitlabProject(t, w, gl, "", files)
@@ -1021,14 +1024,14 @@ func TestGitLabToolFixesTheProject(t *testing.T) {
 	w.until("the answer", func() bool { return len(gl.said()) >= 1 })
 	var offered map[string]any
 	for _, tool := range model.Calls[1].Tools {
-		if m := tool.(map[string]any); m["name"] == "read_file" {
+		if m := tool.(map[string]any); m["name"] == "orders_read_file" {
 			offered = m
 		}
 	}
 	schema, _ := offered["input_schema"].(map[string]any)
 	properties, _ := schema["properties"].(map[string]any)
-	if offered["description"] != "Reads a file of a GitLab project's repository as text." || properties["project"] != nil || properties["path"] == nil {
-		t.Errorf("read_file was offered as %v", offered)
+	if offered["description"] != "Reads a file of the orders app's repository as text." || properties["project"] != nil || properties["path"] == nil {
+		t.Errorf("orders_read_file was offered as %v", offered)
 	}
 	if shown := last(model.Calls[2]); !strings.Contains(shown, `replicas: 2`) {
 		t.Errorf("the model was shown %s", shown)

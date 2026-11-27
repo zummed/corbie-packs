@@ -236,6 +236,7 @@ func TestTelegramOverhearIsRefused(t *testing.T) {
 // houseToolkit is a toolkit with a read tool, lights, and an act tool, tell,
 // which waits for the agent's hook.
 const houseToolkit = `
+	toolkit: house
 	description: The house, and messages to its people.
 	tools:
 	  lights:
@@ -291,28 +292,28 @@ func houseModel(c llmstandin.Call) llmstandin.Reply {
 	case words("lights"):
 		switch step {
 		case 0:
-			return calls("open", `{"toolkit": "house"}`)
+			return calls("open", `{"list": "toolkits", "name": "house"}`)
 		case 1:
-			return calls("lights", `{}`)
+			return calls("house_lights", `{}`)
 		}
 		return llmstandin.Reply{Text: "lights said " + result}
 	case words("twice"):
 		switch step {
 		case 0:
-			return calls("open", `{"toolkit": "house"}`)
+			return calls("open", `{"list": "toolkits", "name": "house"}`)
 		case 1:
 			return llmstandin.Reply{Calls: []llmstandin.ToolCall{
-				{ID: "x1", Name: "tell", Args: `{"chat": "2", "text": "first"}`},
-				{ID: "x2", Name: "tell", Args: `{"chat": "3", "text": "second"}`},
+				{ID: "x1", Name: "house_tell", Args: `{"chat": "2", "text": "first"}`},
+				{ID: "x2", Name: "house_tell", Args: `{"chat": "3", "text": "second"}`},
 			}}
 		}
 		return llmstandin.Reply{Text: "twice gave " + result}
 	case words("tell"):
 		switch step {
 		case 0:
-			return calls("open", `{"toolkit": "house"}`)
+			return calls("open", `{"list": "toolkits", "name": "house"}`)
 		case 1:
-			return calls("tell", `{"chat": "2", "text": "hello from alice"}`)
+			return calls("house_tell", `{"chat": "2", "text": "hello from alice"}`)
 		}
 		return llmstandin.Reply{Text: "tell gave " + result}
 	}
@@ -336,10 +337,9 @@ func houseProject(t *testing.T, w *world, tg *telegram, extra map[string]string)
 	t.Helper()
 	model, address := standin(t, w, houseModel)
 	files := map[string]string{
-		"agents/assistant.yaml":       modelAgent("assistant", address, houseAsk+"toolkits:\n  house: { include: toolkits/house/toolkit.yaml, when: \"${input.asker.scopes.includes('house')}\" }\n"),
+		"agents/assistant.yaml":       modelAgent("assistant", address, houseAsk+"tools:\n  house: { machine: toolkits/house/toolkit.yaml, when: \"${input.asker.scopes.includes('house')}\" }\n"),
 		"toolkits/house/toolkit.yaml": houseToolkit,
 		"toolkits/house/lights.js":    `return { on: ["kitchen", "hall"] }`,
-		".corbieignore":               ignoring(t, "house"),
 		"agents/team.yaml":            echoAgent("team"),
 		"agents/turn.js":              turnJS,
 	}
@@ -385,7 +385,7 @@ func TestApprovalByATapOnYes(t *testing.T) {
 		t.Errorf("the buttons are %v", b)
 	}
 	question := tg.texts("1")[0]
-	for _, want := range []string{"assistant wants to run tell.", "hello from alice", "> tell bob hello"} {
+	for _, want := range []string{"house wants to run tell.", "hello from alice", "> tell bob hello"} {
 		if !strings.Contains(question, want) {
 			t.Errorf("the question %q lacks %q", question, want)
 		}
@@ -606,7 +606,9 @@ func TestQuickMessagesAnsweredInOrder(t *testing.T) {
 			t.Errorf("reply %d answers %v, not message %d", i, sent[i]["reply_parameters"], last)
 		}
 	}
-	if n := len(model.Calls[len(model.Calls)-1].Messages); n != 2*len(turns)-1 {
+	// Each turn is the toolkits the model can open, the person's messages
+	// and the reply.
+	if n := len(model.Calls[len(model.Calls)-1].Messages); n != 3*len(turns)-1 {
 		t.Errorf("the last call carried %d messages, and not the %d turns before it", n, len(turns)-1)
 	}
 }
@@ -915,8 +917,8 @@ func TestPageEveningSchedule(t *testing.T) {
 // bot-project's agent, toolkit, its instructions and placed calls, as
 // written but for the model's address: alice, with orders:read only, asks on
 // Telegram; the model opens orders, is given its instructions, is shown
-// read_file without the project it fixes and not change_file, reads the file
-// from group/orders, and replies.
+// orders_read_file without the project it fixes and not change_file, reads
+// the file from group/orders, and replies.
 func TestPageToolkitAndAgent(t *testing.T) {
 	tg := newTelegram(t)
 	gl := newGitLab(t)
@@ -924,9 +926,9 @@ func TestPageToolkitAndAgent(t *testing.T) {
 	model, address := standin(t, w, func(c llmstandin.Call) llmstandin.Reply {
 		switch _, results := turnOf(c); len(results) {
 		case 0:
-			return calls("open", `{"toolkit": "orders"}`)
+			return calls("open", `{"list": "toolkits", "name": "orders"}`)
 		case 1:
-			return calls("read_file", `{"path": "config/app.yaml"}`)
+			return calls("orders_read_file", `{"path": "config/app.yaml"}`)
 		}
 		return llmstandin.Reply{Text: "It is size 2."}
 	})
@@ -940,8 +942,6 @@ func TestPageToolkitAndAgent(t *testing.T) {
 	for _, path := range []string{"agents/assistant.yaml", "toolkits/orders/toolkit.yaml", "toolkits/orders/orders.md", "grouse/gitlab/repository/files/read.yaml", "grouse/gitlab/repository/commits/create.yaml"} {
 		writeRaw(t, dir, path, pageExample(t, "bot-project", path))
 	}
-	// The project holds testdata's toolkit messages too, whose file stays listed.
-	writeRaw(t, dir, ".corbieignore", pageExample(t, "bot-project", ".corbieignore")+"toolkits/messages/toolkit.yaml\n")
 	agent := pageExample(t, "bot-project", "agents/assistant.yaml")
 	writeRaw(t, dir, "agents/assistant.yaml", strings.Replace(agent, "model: { name: claude-sonnet-5-5, secret: ANTHROPIC_KEY }", "model: { name: claude-sonnet-5-5, service: anthropic, address: "+address+", secret: ANTHROPIC_KEY }", 1))
 	write(t, dir, map[string]string{"people/scopes.yaml": `alice@example.com: { name: alice, scopes: ["orders:read"] }`})
@@ -958,7 +958,7 @@ func TestPageToolkitAndAgent(t *testing.T) {
 		t.Errorf("open did not give the instructions: %s", opened)
 	}
 	tools, _ := json.Marshal(model.Calls[1].Tools)
-	if !strings.Contains(string(tools), `"name":"read_file"`) || strings.Contains(string(tools), "change_file") || strings.Contains(string(tools), `"project"`) {
+	if !strings.Contains(string(tools), `"name":"orders_read_file"`) || strings.Contains(string(tools), "change_file") || strings.Contains(string(tools), `"project"`) {
 		t.Errorf("after open the model is shown %s", tools)
 	}
 	if read := fmt.Sprint(model.Calls[2].Messages); !strings.Contains(read, "size: 2") {
@@ -1023,12 +1023,11 @@ func TestAgentRunsOutOfTurns(t *testing.T) {
 	w := newWorld(t)
 	dir, model := houseProject(t, w, tg, nil)
 	model.Answer = func(c llmstandin.Call) llmstandin.Reply {
-		first, _ := json.Marshal(c.Messages[0])
-		if strings.Contains(string(first), "loop") && !strings.Contains(last(c), "after") {
-			if len(c.Messages) == 1 {
-				return calls("open", `{"toolkit": "house"}`)
+		if strings.Contains(callText(c), "loop") && !strings.Contains(last(c), "after") {
+			if toolUses(c) == 0 {
+				return calls("open", `{"list": "toolkits", "name": "house"}`)
 			}
-			return calls("lights", `{}`)
+			return calls("house_lights", `{}`)
 		}
 		return houseModel(c)
 	}
