@@ -202,6 +202,7 @@ function newest(map, n) {
 // changed back between two asks is not heard. Every list in the cursor is
 // bounded, so that it stays far below the 256 KiB a job's output may hold.
 function hear() {
+  if (!(input.projects || []).length && !input.group) throw new Error("the GitLab listener reads nothing: give it projects:, a list of projects' paths, or group:, a group's path")
   const before = input.cursor
   try {
     const me = call("GET", "/user", { whole: true })
@@ -259,7 +260,6 @@ function poll(before, bot, now, quiet) {
   const changed = new Map()
   const sources = (input.projects || []).map((p) => ({ path: projectPath(p), project: p }))
   if (input.group) sources.push({ path: "/groups/" + encodeURIComponent(input.group) })
-  if (!sources.length) throw new Error("the GitLab listener reads nothing: give it projects:, a list of projects' paths, or group:, a group's path")
   for (const source of sources) {
     for (let page = 1; ; page++) {
       const query = { updated_after: new Date(from).toISOString(), order_by: "updated_at", sort: "desc", state: "all", per_page: "100", page: String(page) }

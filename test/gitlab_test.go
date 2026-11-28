@@ -593,7 +593,7 @@ func TestGitLabWaitsWhenFewAsksAreLeft(t *testing.T) {
 }
 
 // The router corbie add writes names no project, and its listener fails
-// saying what to give it, before GitLab is asked for an issue.
+// saying what to give it, and GitLab is never asked.
 func TestGitLabStartingRouterNamesNoProject(t *testing.T) {
 	gl := newGitLab(t)
 	w := newWorld(t)
@@ -605,6 +605,11 @@ func TestGitLabStartingRouterNamesNoProject(t *testing.T) {
 	w.until("the listener fails", func() bool {
 		return strings.Contains(strings.Join(failures(w), "\n"), "the GitLab listener reads nothing: give it projects:")
 	})
+	gl.mu.Lock()
+	defer gl.mu.Unlock()
+	if len(gl.trail) != 0 {
+		t.Errorf("GitLab was asked: %q", gl.trail)
+	}
 }
 
 // A project with no GITLAB_SITE: the listener fails, and its error names the

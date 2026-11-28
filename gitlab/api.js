@@ -1,7 +1,7 @@
 // GitLab's REST API, for the service's machines and for a toolkit's script. api
 // gives call for the GitLab at site, with the token GITLAB_TOKEN, which it holds
 // only as a handle. A job that loads it lists .packs/gitlab/api.js under files and
-// allows net:<site> and secret:GITLAB_TOKEN@net:<site>.
+// allows secret:GITLAB_TOKEN@net:<site>.
 //
 // call(method, path, options) calls GitLab and gives its answer, read as JSON,
 // or as text with options.raw. With options.whole it gives { headers, body }. A refusal

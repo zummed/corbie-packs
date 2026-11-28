@@ -1,8 +1,7 @@
 // Jira's REST API, for the pack's Jira machines and a project's own scripts. api
 // gives call for the Jira Cloud at site, signed in as email with the API token
 // JIRA_TOKEN, which it holds only as a handle. A job that loads it lists
-// .packs/jira/api.js under files and allows net:<site> and
-// secret:JIRA_TOKEN@net:<site>.
+// .packs/jira/api.js under files and allows secret:JIRA_TOKEN@net:<site>.
 //
 // call(method, path, options) calls Jira and gives its answer, or with options.as
 // "bytes" the bytes it answered; a refusal is thrown with Jira's status, so the

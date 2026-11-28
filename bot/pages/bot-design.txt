@@ -198,7 +198,7 @@ goes.
           answer:
             send: { to: { at: answers, key: "${event.data.question}" }, event: answer, data: "${event.data}" }
 
-- A rule can only send, and a send goes only to a statechart: a singleton's run, or a keyed run, which it starts. A post or a lookup is a call, so the conversation makes it.
+- A rule can only send. A send goes to a singleton's run, to a keyed run, which it starts, or to a transient location, where it starts a run with the message as its input. A post or a lookup is a call, so the conversation makes it.
 - An answer goes only to a run of `answers`, whatever the button holds, which sends it on only to the question that opened it.
 - `receive: []`, in the router and in the pack's listener, refuses a send from any location, so the router takes events only from its listener, and the listener sends only what its service gave.
 - `restart: { after: always }` starts the listener again when it ends. A listener whose read fails waits, then reads again.
@@ -242,7 +242,7 @@ A message is one mapping, the same from every service.
   own            true for the bot's own comment, on GitLab
   change         what changed: reaction on Slack; closed, reopened, labels, milestone or assignees on GitLab
   at             on Slack, the message's time, by which conversations/replies reads what came before it
-  answers        on Telegram, the message a reply answers
+  answers        on Telegram, the message's chat and ID, which chat/post replies to
   later          on a reminder, the minutes it waited; its text is the agent's note
 
   Telegram    chat: the chat's ID
@@ -253,7 +253,7 @@ A message is one mapping, the same from every service.
 - `history` holds at most 20 entries and 8000 characters, and on Jira the issue and its latest 50 public comments. It is an empty list when nothing came before.
 - A Slack reaction's text is the emoji, such as `:eyes:`, its `at` the message reacted to, and its history the thread before the reaction, that message included.
 - A GitLab change's text says what changed, such as `labels +bug`, and an opened issue is a message whose text is its title and description.
-- An answer holds `service`, `question`, the key its button or line holds, `user`, `name`, `email` and `choice`, on Telegram `tap`, and on Jira `chat`, the issue it was written on. A stop holds `service`, `place`, `chat`, `user`, `name` and `email`.
+- An answer holds `service`, `question`, the key its button or line holds, `user`, `name`, `email` and `choice`, on Telegram `tap`, and on Jira `chat`, the issue it was written on. A stop holds `service`, `place`, `chat`, `user`, `name`, `email` where the service gives one, and on Telegram `answers`.
 
 Telegram's Bot API keeps no history a bot can read, so Telegram's listener
 keeps the person's messages it heard, never the bot's replies. `complete` says
@@ -589,6 +589,7 @@ What the packs do not defend against
 - Text a tool returns, such as an issue or a web page, and a thread's history, can tell the model to do things. Give each tool that changes something `approve: true`.
 - A redactor cleans only what is posted. The model sees every tool's whole result, and so does that person's next turn.
 - A listener takes a message's sender from the service, and the lookup trusts the ID and the email the service gives. A row in `people/scopes.yaml` gives its scopes to whoever the service says holds that ID or that email.
+- A router whose `receive:` names a client, such as a gateway's, takes each message's `service`, `user` and `email` from that client, so the lookup gives the scopes of whoever the client names.
 - Slack gives the email of a person from another organisation in a Slack Connect channel as that organisation set it.
 - GitLab gives a person's public email, which they choose on their account, unless the token is an administrator's. A GitLab that does not confirm emails lets a person show someone else's.
 - Jira gives an email only where the person's privacy settings show it. Without one, the person's row is `jira:<their account ID>`.
