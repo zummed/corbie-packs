@@ -28,8 +28,8 @@ github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 h1:KRzFb2m7YtdldCEkzs6KqmJw4nqEV
 github.com/santhosh-tekuri/jsonschema/v6 v6.0.2/go.mod h1:JXeL+ps8p7/KNMjDQk3TCwPpBy0wYklyWTfbkIzdIFU=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
-github.com/zummed/corbie v0.43.1-0.20261127233808-688337673bbc h1:XaTbJffuoO2DZ7IyrW1yqjrd9radVJhe7hIx+4AYN6I=
-github.com/zummed/corbie v0.43.1-0.20261127233808-688337673bbc/go.mod h1:jEYDTjWJXqCRbHvOsCYzEEe+x70/ayGfSONqPS/+hCQ=
+github.com/zummed/corbie v0.44.0 h1:J3RbxVNGQjVrWzA/Jt8EUEnjSjO+k74u5FKG6JMI1DI=
+github.com/zummed/corbie v0.44.0/go.mod h1:jEYDTjWJXqCRbHvOsCYzEEe+x70/ayGfSONqPS/+hCQ=
 go.etcd.io/raft/v3 v3.7.0 h1:BGzlwx07bLv8PW6OU5HObuz1y4hlPZUXA07pM1mPUh4=
 go.etcd.io/raft/v3 v3.7.0/go.mod h1:6gX6T2X907DjnjsFLODnTxba77stjs84W9gTTI0GUNA=
 go.yaml.in/yaml/v3 v3.0.5 h1:N6y/pJk8buWs9NY5ERU2HSMfm+IuD/OtfdAnq6kESPw=
