@@ -444,6 +444,8 @@ type gitlab struct {
 	throttle  int                    // the next ask for issues is answered 429, with this Retry-After
 	remaining int                    // with more than 0, every answer gives RateLimit-Remaining as this
 	reset     time.Time              // the RateLimit-Reset every answer gives with remaining
+	clock     func() time.Time       // the stand-in's time, for its Date header and what it makes; the computer's when nil
+	trail     []string               // each ask and each resource event, as "<time> <what>", for a failed test to give
 	latest    time.Time              // when the stand-in was last asked anything
 }
 
@@ -474,6 +476,21 @@ func newGitLab(t *testing.T) *gitlab {
 	gl.Server = httptest.NewServer(http.HandlerFunc(gl.serve))
 	t.Cleanup(gl.Close)
 	return gl
+}
+
+// now gives the stand-in's time.
+func (gl *gitlab) now() time.Time {
+	if gl.clock == nil {
+		return time.Now()
+	}
+	return gl.clock()
+}
+
+// trailed gives the trail from entry from on, one entry a line.
+func (gl *gitlab) trailed(from int) string {
+	gl.mu.Lock()
+	defer gl.mu.Unlock()
+	return strings.Join(gl.trail[from:], "\n")
 }
 
 // user gives what GitLab shows of a user in a note or an event.
@@ -507,7 +524,7 @@ func (gl *gitlab) made(project string, iid int) *glIssue {
 	if is := gl.find(project, iid); is != nil {
 		return is
 	}
-	now := time.Now().UTC()
+	now := gl.now().UTC()
 	is := &glIssue{Project: project, IID: iid, Title: "Broken build", Description: "It fails.", State: "opened", Author: 2, Created: now, Updated: now, Events: map[string][]map[string]any{}}
 	gl.issues = append(gl.issues, is)
 	return is
@@ -519,7 +536,7 @@ func (gl *gitlab) change(project string, iid int, f func(*glIssue)) {
 	defer gl.mu.Unlock()
 	is := gl.made(project, iid)
 	f(is)
-	is.Updated = time.Now().UTC()
+	is.Updated = gl.now().UTC()
 }
 
 // comment adds a note by a user to an issue, made if there is none, and gives
@@ -534,7 +551,7 @@ func (gl *gitlab) comment(project string, iid, author int, body string, fields .
 }
 
 func (gl *gitlab) addNote(is *glIssue, id, author int, body string, fields ...map[string]any) {
-	now := time.Now().UTC()
+	now := gl.now().UTC()
 	n := map[string]any{"id": id, "body": body, "author": gl.user(author), "created_at": now.Format(time.RFC3339Nano), "updated_at": now.Format(time.RFC3339Nano),
 		"system": false, "internal": false, "confidential": false, "noteable_type": "Issue", "noteable_iid": is.IID}
 	for _, f := range fields {
@@ -562,7 +579,8 @@ func (gl *gitlab) event(project string, iid, author int, kind string, fields map
 	defer gl.mu.Unlock()
 	is := gl.made(project, iid)
 	gl.nextID++
-	now := time.Now().UTC()
+	now := gl.now().UTC()
+	gl.trail = append(gl.trail, fmt.Sprintf("%s %s event %d %v", now.Format("15:04:05.000"), kind, gl.nextID, fields))
 	e := map[string]any{"id": gl.nextID, "user": gl.user(author), "created_at": now.Format(time.RFC3339Nano), "resource_type": "Issue", "resource_id": is.IID}
 	maps.Copy(e, fields)
 	is.Events[kind] = append(is.Events[kind], e)
@@ -675,6 +693,8 @@ func (gl *gitlab) serve(w http.ResponseWriter, r *http.Request) {
 	gl.mu.Lock()
 	defer gl.mu.Unlock()
 	gl.latest = time.Now()
+	w.Header().Set("Date", gl.now().UTC().Format(http.TimeFormat))
+	gl.trail = append(gl.trail, gl.now().UTC().Format("15:04:05.000")+" "+r.Method+" "+r.URL.Path)
 	escaped := r.URL.EscapedPath()
 	if strings.Contains(escaped, "/uploads/") {
 		gl.fetches = append(gl.fetches, r.Method+" "+escaped)
@@ -903,7 +923,7 @@ func (gl *gitlab) list(w http.ResponseWriter, r *http.Request, take func(*glIssu
 		w.WriteHeader(500)
 		return
 	}
-	at := map[string]time.Time{"updated_after": {}, "created_before": time.Now().Add(time.Hour)}
+	at := map[string]time.Time{"updated_after": {}, "created_before": gl.now().Add(time.Hour)}
 	for name := range at {
 		if s := q.Get(name); s != "" {
 			t, err := time.Parse(time.RFC3339Nano, s)
