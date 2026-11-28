@@ -465,8 +465,8 @@ func readFile(t *testing.T, dir, name string) string {
 
 // A flow agent deleted while its question waits: the submit cancels the agent
 // and, with it, the question it called. The asker is told the answer failed,
-// and a later message that the bot has no agent yet; the failed turn names the
-// agent's location.
+// and is told the same of a later message; the failed turn names the agent's
+// location.
 func TestDeletedAgentWhileQuestionWaits(t *testing.T) {
 	w := newWorld(t)
 	dir := copyStarter(t)
@@ -500,7 +500,7 @@ func TestDeletedAgentWhileQuestionWaits(t *testing.T) {
 	}
 	w.until("the asker told", func() bool { return sayings(t, w)["That could not be answered."] != nil })
 	w.sendTo("conversation.yaml", key("2", "2"), "message", from("2", "again", 13))
-	w.until("the asker told there is no agent", func() bool { return sayings(t, w)["This bot has no agent yet."] != nil })
+	w.until("the asker told again", func() bool { return posts(t, w, "That could not be answered.") == 2 })
 	failed := false
 	for _, run := range stubs(t, w, "turn") {
 		failed = failed || strings.Contains(w.show(run.ID).Error, "agents/assistant")

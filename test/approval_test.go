@@ -332,6 +332,24 @@ func TestQuestionUnansweredWithinIsNo(t *testing.T) {
 	}
 }
 
+// A question with an empty approvers, which no scope holds, fails as it
+// starts, naming approvers, and posts nothing.
+func TestQuestionRefusesEmptyApprovers(t *testing.T) {
+	w := newWorld(t)
+	dir := approvalProject(t, w, noModel)
+	write(t, dir, map[string]string{"on/asker.yaml": asker("telegram", `{ in: "1", text: "Deploy?", choices: [yes, no], approvers: "" }`)})
+	receiveFrom(t, dir, "telegram", "on/*")
+	w.sync(dir)
+	id := w.start("on/asker.yaml", nil)
+	w.until("the asker done", func() bool { return w.show(id).HasEnded() })
+	if run := w.show(id); run.Status != "failed" || !strings.Contains(run.Error, "/approvers") {
+		t.Errorf("the asker ended %s: %s", run.Status, run.Error)
+	}
+	if runs := w.at(bot + "/telegram/chat/show.yaml"); len(runs) != 0 {
+		t.Errorf("the question was shown %d times", len(runs))
+	}
+}
+
 // A question refuses the asker's own press only when it names the asker, by
 // email or by their ID on the service: alice's press is then refused and she
 // is told so. With none, or with her ID on another service, it counts.

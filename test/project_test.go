@@ -581,6 +581,22 @@ func sayings(t *testing.T, w *world) map[string]map[string]any {
 	return said
 }
 
+// posts counts the finished posts of a project's services with this text.
+func posts(t *testing.T, w *world, text string) int {
+	t.Helper()
+	runs, err := w.List(context.Background(), client.Filter{Finished: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	for _, run := range runs {
+		if strings.HasSuffix(run.Machine, "-chat-post") && w.show(run.ID).Input.(map[string]any)["text"] == text {
+			n++
+		}
+	}
+	return n
+}
+
 // approving makes a project whose listener hears what the script says, and
 // whose agent at agents/assistant asks a stand-in model, which opens the
 // toolkit messages, tells bob hello, and then says told. The lookup knows

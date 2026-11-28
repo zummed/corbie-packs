@@ -294,7 +294,7 @@ each turn is a flow it runs as a child, whose stages are written in the file.
 - The agent's file is read for each turn, so a changed agent answers the next turn. A changed `conversation.yaml` lets the runs under way finish with the machines they started with.
 - A run with no message for a day ends, and the next message starts a new one.
 - A status that fails does not fail the turn, and a post that fails clears Slack's status all the same.
-- When a turn fails, for any reason, the conversation posts a fixed text, `That could not be answered.`, or `This bot has no agent yet.` when there is no `agents/assistant.yaml`. The error is in the turn's record.
+- When a turn fails, for any reason, the conversation posts `That could not be answered.` The error is in the turn's record, and names `agents/assistant` when there is no `agents/assistant.yaml`.
 - After a failed turn, or a reply whose post failed, the next turn starts a new conversation with the agent.
 
 A filter for messages the router sends marked `unaddressed`, and a redactor
@@ -439,7 +439,7 @@ and last 150 characters, with its length. It gives `{ ok, note }`.
 
   job         the held job, written `"${job}"`
   ask         the places, each { at, in }: the question's location, such as grouse/slack/chat/ask, and where it is posted there: a channel, a thread or a chat
-  approvers   the scope a press needs to count
+  approvers   the scope a press needs to count; the question refuses an empty one
   within      how long it waits; 7d by default, and no press in time is no
   asker       the email of the person who asked, or `<service>:<their ID>`, shown in the question, whose own press is refused; left out, they may approve their own request
   request     what was asked, shown quoted

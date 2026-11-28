@@ -71,7 +71,7 @@ each router, which starts its listener. A secret or a value set at
 `grouse`, and one set at `/my-bot` by every run of the project. Set each at
 the narrowest location.
 
-- Until the project has an agent, the bot answers anyone who names it with `This bot has no agent yet.`
+- Until the project has an agent, the bot answers anyone who names it with `That could not be answered.`, and each turn's error names `agents/assistant`.
 - Submit the project from a client no gateway uses: a gateway whose client submitted the project can call any of its locations with any input.
 - `corbie ui` shows each run and what waits on a person. Its Machines page draws each toolkit with its tools and hooks.
 

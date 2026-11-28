@@ -39,7 +39,7 @@ input:
     in: { type: string }
     text: { type: string }
     choices: { type: array }
-    approvers: { type: string }
+    approvers: { type: string, minLength: 1 }
     asker: { type: string }
     within: { type: string }
     router: { type: string }
@@ -63,6 +63,7 @@ states:
     on: { done: open, failed: open }
   open:
     timers: { unanswered: "${input.within || '7d'}" }
+    exit: { send: { to: { at: answers, key: "${states.keying.output}" }, event: shut } }
     initial: waiting
     states:
       waiting:
@@ -74,8 +75,8 @@ states:
           input: { answer: "${event.data}", lookup: "${input.lookup}", approvers: "${input.approvers}", asker: "${input.asker || ''}", choices: "${input.choices}" }
         on:
           done:
-            - { go: settling, when: "${event.data.counts && input.ballot != null}", send: { to: { at: answers, key: "${states.keying.output}" }, event: shut } }
-            - { go: answered, when: "${event.data.counts}", send: { to: { at: answers, key: "${states.keying.output}" }, event: shut } }
+            - { go: settling, when: "${event.data.counts && input.ballot != null}" }
+            - { go: answered, when: "${event.data.counts}" }
             - { go: telling, when: "${event.data.tell !== ''}" }
             - waiting
           failed: waiting
@@ -84,8 +85,8 @@ states:
         job: { call: { at: "${input.show}" }, input: { do: tell, sent: "${states.asking.output.sent}", answer: "${states.checking.output.answer}", by: "${states.checking.output.by}", text: "${states.checking.output.tell}" } }
         on: { done: waiting, failed: waiting }
     on:
-      unanswered: { go: unanswered, send: { to: { at: answers, key: "${states.keying.output}" }, event: shut } }
-      close: { go: closed, when: "${input.ballot != null && event.from.at === run.tree + '/' + input.ballot.at && event.from.key === input.ballot.key}", send: { to: { at: answers, key: "${states.keying.output}" }, event: shut } }
+      unanswered: unanswered
+      close: { go: closed, when: "${input.ballot != null && event.from.at === run.tree + '/' + input.ballot.at && event.from.key === input.ballot.key}" }
   settling:
     job: { send: { to: "${input.ballot}", event: settled, data: { choice: "${states.checking.output.choice}", by: "${states.checking.output.by}", where: "${states.asking.output.where}" } }, allow: ["send:${input.ballot.at}"] }
     on: { done: answered, failed: answered }

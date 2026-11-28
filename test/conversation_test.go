@@ -259,9 +259,9 @@ func TestFailedReplyClearsTheStatusAndStartsAfresh(t *testing.T) {
 	}
 }
 
-// A project as init writes it has no agent: a person who writes is told the
-// bot has no agent yet, with no name of the project's files, and the failed
-// turn names the agent's location.
+// A project as init writes it has no agent: a person who writes is told it
+// could not be answered, as for any failed turn, with no name of the
+// project's files, and the failed turn names the agent's location.
 func TestStarterAnswersNobody(t *testing.T) {
 	tg := newTelegram(t)
 	w := newWorld(t)
@@ -277,8 +277,8 @@ func TestStarterAnswersNobody(t *testing.T) {
 	tg.dm(1, "hi")
 	tg.dm(9, "hello?")
 	w.sync(dir)
-	tg.waitFor(w, "1", "This bot has no agent yet.")
-	tg.waitFor(w, "9", "This bot has no agent yet.")
+	tg.waitFor(w, "1", "That could not be answered.")
+	tg.waitFor(w, "9", "That could not be answered.")
 	for _, f := range failures(w) {
 		if !strings.Contains(f, "nothing is recorded at "+project+"/agents/assistant") && !strings.HasSuffix(f, " fail: ") {
 			t.Errorf("a run failed: %s", f)
