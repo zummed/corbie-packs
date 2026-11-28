@@ -3,8 +3,8 @@
 # value JIRA_EMAIL, with the API token that is the secret JIRA_TOKEN. Its
 # first ask marks the time, and hears nothing. It sends its parent:
 #
-#   message   an opened issue or a comment that names the bot; with overhear,
-#             every other one, marked unaddressed
+#   message   an opened issue, marked opened, or a comment that names the bot;
+#             with overhear, every other one, marked unaddressed
 #   answer    a comment that holds only a line a question showed: a choice and
 #             the question's key, with chat, the issue it was written on
 #

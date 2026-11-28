@@ -239,12 +239,14 @@ func TestGitLabGroupIsAskedOnce(t *testing.T) {
 	}
 }
 
-// With overhear, a comment that does not name the bot is sent marked
-// unaddressed, and the starting router drops it.
+// With overhear, an opened issue and a comment that do not name the bot are
+// sent marked unaddressed, and the starting router drops them. The issue's
+// message is marked opened, and a comment's is not.
 func TestGitLabOverheardCommentIsUnaddressed(t *testing.T) {
 	gl := newGitLab(t)
 	w := newWorld(t)
 	gitlabProject(t, w, gl, "{ projects: [group/project], overhear: true }", nil)
+	gl.issue("group/project", 8)
 	gl.comment("group/project", 7, 3, "please fix this")
 	gl.comment("group/project", 7, 2, "please, @bot")
 	tick(w, gl.asked)
@@ -253,9 +255,20 @@ func TestGitLabOverheardCommentIsUnaddressed(t *testing.T) {
 	if got := gl.said(); !slices.Equal(got, []string{"please,"}) {
 		t.Fatalf("the bot said %q", got)
 	}
-	m := listened(w, "message")
-	if len(m) < 2 || m[0]["text"] != "please fix this" || m[0]["unaddressed"] != true || m[1]["unaddressed"] != nil {
-		t.Fatalf("the listener sent %v", m)
+	var issue, comments []map[string]any
+	for _, m := range listened(w, "message") {
+		if m["chat"] == "group/project#8" {
+			issue = append(issue, m)
+		} else {
+			comments = append(comments, m)
+		}
+	}
+	if len(issue) != 1 || issue[0]["opened"] != true || issue[0]["unaddressed"] != true || issue[0]["text"] != "Broken build\n\nIt fails." {
+		t.Fatalf("the listener sent for the issue %v", issue)
+	}
+	if len(comments) != 2 || comments[0]["text"] != "please fix this" || comments[0]["unaddressed"] != true || comments[1]["unaddressed"] != nil ||
+		comments[0]["opened"] != nil || comments[1]["opened"] != nil {
+		t.Fatalf("the listener sent for the comments %v", comments)
 	}
 }
 

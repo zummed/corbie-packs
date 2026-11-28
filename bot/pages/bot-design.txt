@@ -240,6 +240,7 @@ A message is one mapping, the same from every service.
   attachments    the files sent with it, each { name, type, size, id }, and absent with none
   unaddressed    true for a message that does not name the bot
   own            true for the bot's own comment, on GitLab
+  opened         true for an opened issue, on GitLab and Jira
   change         what changed: reaction on Slack; closed, reopened, labels, milestone or assignees on GitLab
   at             on Slack, the message's time, by which conversations/replies reads what came before it
   answers        on Telegram, the message's chat and ID, which chat/post replies to
@@ -252,7 +253,8 @@ A message is one mapping, the same from every service.
 
 - `history` holds at most 20 entries and 8000 characters, and on Jira the issue and its latest 50 public comments. It is an empty list when nothing came before.
 - A Slack reaction's text is the emoji, such as `:eyes:`, its `at` the message reacted to, and its history the thread before the reaction, that message included.
-- A GitLab change's text says what changed, such as `labels +bug`, and an opened issue is a message whose text is its title and description.
+- A GitLab change's text says what changed, such as `labels +bug`.
+- An opened issue's text is its title and description on GitLab, and its summary and description on Jira.
 - An answer holds `service`, `question`, the key its button or line holds, `user`, `name`, `email` and `choice`, on Telegram `tap`, and on Jira `chat`, the issue it was written on. A stop holds `service`, `place`, `chat`, `user`, `name`, `email` where the service gives one, and on Telegram `answers`.
 
 Telegram's Bot API keeps no history a bot can read, so Telegram's listener

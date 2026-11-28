@@ -317,8 +317,8 @@ function poll(before, bot, now, quiet) {
   const say = (at, event, data) => heard.push({ at: at, event: event, data: Object.assign({ service: "gitlab" }, data) })
 
   // comment keeps a message for a comment, or for an opened issue with no
-  // note: one that names the bot, the bot's own, and with overhear any other,
-  // marked unaddressed.
+  // note, marked opened: one that names the bot, the bot's own, and with
+  // overhear any other, marked unaddressed.
   const comment = (issue, note) => {
     if (quiet) return
     const author = note ? note.author : issue.author
@@ -330,6 +330,7 @@ function poll(before, bot, now, quiet) {
     const files = attachments(text, issue.project)
     if (files.length) m.attachments = files
     if (!who.own && !names(said)) m.unaddressed = true
+    if (!note) m.opened = true
     say(Date.parse(note ? note.created_at : issue.created_at), "message", m)
   }
 

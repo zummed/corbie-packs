@@ -105,9 +105,10 @@ func TestJiraIssuesAreAnswered(t *testing.T) {
 	}
 }
 
-// With overhear, a comment that does not name the bot is sent to the router
-// as any message is, with the person and the history, and marked unaddressed;
-// the router starts no conversation for it.
+// With overhear, an opened issue and a comment that do not name the bot are
+// sent to the router as any message is, with the person and the history, and
+// marked unaddressed; the issue's message is marked opened, and a comment's is
+// not. The router starts no conversation for either.
 func TestJiraOverheardCommentIsMarkedAndDropped(t *testing.T) {
 	j := newJira(t)
 	w, dir := jiraWorld(t, j, nil)
@@ -115,27 +116,38 @@ func TestJiraOverheardCommentIsMarkedAndDropped(t *testing.T) {
 	w.sync(dir)
 	routing := w.kept(router("jira"))
 	tick(w, j.asked)
-	at := time.Now().Add(time.Second)
-	j.comment("1", "acc-1", "just noting", at)
-	j.comment("2", "acc-1", "[~accountid:acc-bot] please look", at.Add(time.Millisecond))
-	tick(w, j.asked)
 	var heard []map[string]any
-	w.until("both messages at the router", func() bool {
-		heard = nil
-		for _, e := range w.record(routing) {
-			for _, ev := range e.Events {
-				if m, ok := ev.Data.(map[string]any); ok && e.ID == routing && ev.Name == "message" {
-					heard = append(heard, m)
+	atRouter := func(n int) {
+		w.until("the messages at the router", func() bool {
+			heard = nil
+			for _, e := range w.record(routing) {
+				for _, ev := range e.Events {
+					if m, ok := ev.Data.(map[string]any); ok && e.ID == routing && ev.Name == "message" {
+						heard = append(heard, m)
+					}
 				}
 			}
-		}
-		return len(heard) >= 2
-	})
-	over, named := heard[0], heard[1]
-	if over["unaddressed"] != true || over["text"] != "just noting" || over["name"] != "Al" || over["email"] != "al@example.com" || over["history"] == nil {
+			return len(heard) >= n
+		})
+	}
+	at := time.Now().Add(time.Second)
+	j.mu.Lock()
+	j.fields = map[string]any{"created": jiraTime(at), "updated": jiraTime(time.Now().Add(-time.Hour)), "description": "VPN keeps dropping"}
+	j.mu.Unlock()
+	tick(w, j.asked)
+	atRouter(1)
+	j.comment("1", "acc-1", "just noting", at.Add(time.Second))
+	j.comment("2", "acc-1", "[~accountid:acc-bot] please look", at.Add(time.Second+time.Millisecond))
+	tick(w, j.asked)
+	atRouter(3)
+	issue, over, named := heard[0], heard[1], heard[2]
+	if issue["opened"] != true || issue["unaddressed"] != true || issue["text"] != "Broken\n\nVPN keeps dropping" {
+		t.Errorf("the opened issue's message is %v", issue)
+	}
+	if over["opened"] != nil || over["unaddressed"] != true || over["text"] != "just noting" || over["name"] != "Al" || over["email"] != "al@example.com" || over["history"] == nil {
 		t.Errorf("the overheard message is %v", over)
 	}
-	if named["unaddressed"] != nil || named["text"] != "please look" {
+	if named["opened"] != nil || named["unaddressed"] != nil || named["text"] != "please look" {
 		t.Errorf("the named message is %v", named)
 	}
 	w.until("the answer", func() bool { return len(j.saying()) >= 1 })

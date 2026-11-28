@@ -171,7 +171,8 @@ if (input.do === "hear") {
   const answer = (text) => /^(.+?)\s+([0-9a-z]{12})$/.exec(text.trim().replace(/^(\{\{|`)|(\}\}|`)$/g, "").trim())
   const heard = []
   // hear keeps a message that names the bot, and with overhear one that does
-  // not, marked unaddressed. before is the comment's ID, or null for the issue.
+  // not, marked unaddressed. before is the comment's ID, or null for the issue,
+  // whose message is marked opened.
   const hear = (issue, from, text, before, files) => {
     const named = text.includes(mention)
     if (!named && !input.overhear) return
@@ -181,6 +182,7 @@ if (input.do === "hear") {
       text: text.replaceAll(mention, "").trim(), history: read.entries, complete: read.complete }
     if (files.length) m.attachments = files
     if (!named) m.unaddressed = true
+    if (before === null) m.opened = true
     heard.push(["message", m])
   }
   const minutes = Math.ceil((now - since) / 60000) + 2

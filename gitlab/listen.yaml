@@ -4,7 +4,7 @@
 #
 #   message   a comment that names the bot; the bot's own, marked own
 #   message   with overhear, any other public comment, marked unaddressed
-#   message   an opened issue, once nobody has changed it for settle
+#   message   an opened issue, marked opened, once nobody has changed it for settle
 #   message   a change: closed, reopened, labels, milestone or assignees
 #   answer    a comment that is only a choice, while a question waits on the issue
 #
