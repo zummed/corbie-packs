@@ -100,6 +100,7 @@ type grouse struct {
 func newGrouse(t *testing.T, script map[string][]llmstandin.Reply, edit func(dir string)) *grouse {
 	t.Helper()
 	g := &grouse{world: newWorld(t), s: newSlack(t), gl: newGitLab(t), hv: newHypervisor(t), script: script}
+	g.gl.clock = g.world.now
 	g.dir = grouseCopy(t)
 	point(t, g.dir, "slack", g.s.Server, slackHosts...)
 	point(t, g.dir, "gitlab", g.gl.Server)
@@ -672,6 +673,9 @@ func TestGrouseGitLab(t *testing.T) {
 	g.s.mu.Lock()
 	g.s.held["CLOG"] = held
 	g.s.mu.Unlock()
+	g.gl.mu.Lock()
+	trail := len(g.gl.trail)
+	g.gl.mu.Unlock()
 	g.gl.label("group/orders", 1, 5, "add", "bug")
 	g.pollUntil("the first change's post", func() bool {
 		g.s.mu.Lock()
@@ -690,7 +694,7 @@ func TestGrouseGitLab(t *testing.T) {
 		got = append(got, fmt.Sprint(p["markdown_text"]))
 	}
 	if want := []string{"group/orders#1: labels +bug", "group/orders#1: labels +urgent"}; !slices.Equal(got, want) {
-		t.Errorf("#orders-log was told %q", got)
+		t.Errorf("#orders-log was told %q; GitLab was asked, from the first change on:\n%s", got, g.gl.trailed(trail))
 	}
 	logs := keyed(g.world, "issue-log.yaml")
 	if len(logs) != 1 || logs["group/orders#1"] == nil {
