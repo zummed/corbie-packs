@@ -44,11 +44,12 @@ While you write
 ---------------
 
 - Choose each change with the table under Common changes in `.packs/bot/pages/bot-project.txt`.
-- Name scopes as `<toolkit>:<what>`, such as `orders:read` and `orders:approve`, and give a toolkit a `when:` on the asker's scopes on its entry in the agent's file.
-- Write each toolkit in its own directory, as `toolkits/orders/`, with its file `toolkit.yaml`, its instructions and the machines written for its tools, and list `toolkits/orders/toolkit.yaml` in `.corbieignore`.
+- Name scopes as `<toolkit>:<what>`, such as `orders:read` and `orders:approve`. Name a toolkit in the agent's `tools:` as `orders: { machine: toolkits/orders/toolkit.yaml, when: … }`, with a `when:` on the asker's scopes.
+- Write each toolkit in its own directory, as `toolkits/orders/`, with its file `toolkit.yaml`, which starts `toolkit: orders`, its instructions and the machines written for its tools. The model is shown a toolkit's tool as `orders_read_file`.
 - Write a tool that uses no secret in place in the toolkit's file, or as `call: <location>` of a call the project places. Write a tool that uses a secret as `call: <location>` of a machine in the toolkit's directory, since a tool written in place runs at the agent's location. A schedule, another machine or a client can run that machine without the agent.
+- A tool inside a toolkit takes no `when:`. Write a tool that only some of the toolkit's people are offered as an entry of the agent's `tools:`, as `change_file: { call: <location>, input: …, when: … }`.
 - Give a tool `approve: true` when it changes something, and a `call:` an `input:` fixing what the model must not choose.
-- Give a tool with `approve: true` a `meta:` that says who approves it, as `meta: { channel: "#orders-team", approvers: "orders:approve", within: 1d }`.
+- Give a tool with `approve: true` a `meta:` that says who approves it, as `meta: { channel: "#orders-team", approvers: "orders:approve", within: 1d }`. A tool written in place writes both in its `job:`.
 - Give an agent with a held tool a hook, under `hooks:`, with `when: "${job.approve}"` and `before:` running `.packs/bot/approval.yaml`, as `.packs/bot/pages/bot-project.txt` shows. Its input gives `job: "${job}"`, in `ask:` each place to ask, as `{ at, in }`, with the channel from `job.meta`, the approvers and the wait from `job.meta`, `asker: "${input.asker.email}"`, or for people with no email `asker: "${input.asker.email || input.messages[0].service + ':' + input.messages[0].user}"`, so the approvers see who asked and nobody approves their own request, and a `request:` that marks a reminder's note as the bot's.
 - Place a call of a pack's with a file of one line under `<bot>/<service>/`, as `include: .packs/gitlab/pipeline/create.yaml`.
 - Add a location that calls the bot's `chat/ask` to the `receive:` of its placed file, or the call is refused.
@@ -72,8 +73,7 @@ After you change a project
    yourself only when the person asks: a second copy of a router takes the
    first one's messages.
 5. Tell the person that `corbie ui`, started in the project, shows each run,
-   draws each machine, and lists each toolkit with its tools that have
-   `approve: true`.
+   and draws each machine, a toolkit with its tools and hooks.
 
 After `corbie add` updates a project, it names the project's files that are
 not as their pack starts them. A pack's starting files are under its

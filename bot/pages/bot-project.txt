@@ -73,7 +73,7 @@ the narrowest location.
 
 - Until the project has an agent, the bot answers anyone who names it with `This bot has no agent yet.`
 - Submit the project from a client no gateway uses: a gateway whose client submitted the project can call any of its locations with any input.
-- `corbie ui` shows each run and what waits on a person. Its Toolkits page shows each toolkit, the agents that offer it, and which of its tools have `approve: true`.
+- `corbie ui` shows each run and what waits on a person. Its Machines page draws each toolkit with its tools and hooks.
 
 After a change
 --------------
@@ -107,7 +107,7 @@ Submit to one Corbie only: a second copy of a router, with the same token,
 takes the first one's messages.
 
   a router, or a file its listener reads    the router and its listener start again; the conversations go on
-  an agent, or a toolkit it includes        the next turn is answered by the new agent
+  an agent, or a toolkit it names           the next turn is answered by the new agent; a toolkit open in a conversation stays as it was shown
   conversation.yaml                         the runs under way finish with the machines they started with
   a file deleted                            the runs at its location are cancelled
   a value                                   a listener reads it when it starts: corbie run cancel /my-bot/grouse/<service>/grouse, then submit
@@ -126,7 +126,7 @@ the packs' repository. Copy what you want, then run the two commands above.
 What a project holds
 --------------------
 
-  .corbieignore       what is no machine: .packs/, people/scopes.yaml, and each toolkit's file
+  .corbieignore       what is no machine: .packs/ and people/scopes.yaml
   conversation.yaml   one run for each person in each thread, and the stages of a turn
   grouse/<service>/   the router of the bot grouse on a service, and the calls it places, each a file of one line
   people/find.yaml    the lookup: who someone is, and their scopes
@@ -148,7 +148,7 @@ Add an agent
 
 The conversation calls the agent at `agents/assistant` for each turn, with
 the asker's scopes, which the lookup reads from `people/scopes.yaml`. A
-toolkit the agent includes is offered only to a person whose scopes its
+toolkit the agent names is offered only to a person whose scopes its
 `when:` names. The example's tools call GitLab, so add its pack first in the
 project, and set its secret and value. In the router `corbie add` writes,
 `grouse/gitlab/grouse.yaml`, give the listener's input `projects:` or
@@ -175,7 +175,7 @@ To add the agent:
 
 1. Give each person a row in `people/scopes.yaml`, their name and scopes under their email as the service shows it, or under the service and their ID there, as `slack:U0123456789`.
 2. Write `agents/assistant.yaml`, which includes `.packs/bot/agent.yaml` and names its model.
-3. Write each toolkit in its own directory under `toolkits/`, list its file in `.corbieignore`, and place or write each machine its tools call.
+3. Write each toolkit in its own directory under `toolkits/`, name it in the agent's `tools:`, and place or write each machine its tools call.
 4. Set the model's secret: `corbie client secret set ANTHROPIC_KEY --at /my-bot/agents`.
 
     # people/scopes.yaml, with two people
@@ -204,20 +204,21 @@ To add the agent:
             within: "${job.meta.within || '7d'}"
             asker: "${input.asker.email}"
             request: "${input.messages.map((m) => (m.later != null ? '(a reminder the bot set) ' : '') + m.text).join('\\n')}"
-    toolkits:
-      orders: { include: toolkits/orders/toolkit.yaml, when: "${input.asker.scopes.includes('orders:read')}" }
-
-    # toolkits/orders/toolkit.yaml
-    description: The orders app, its settings, and changing them.
-    instructions: { include: ./orders.md }
     tools:
-      read_file: { call: grouse/gitlab/repository/files/read, input: { project: group/orders } }
+      orders: { machine: toolkits/orders/toolkit.yaml, when: "${input.asker.scopes.includes('orders:read')}" }
       change_file:
         call: grouse/gitlab/repository/commits/create
         input: { project: group/orders }
         approve: true
         meta: { channel: "#orders-team", approvers: "orders:approve", within: 1d }
         when: "${input.asker.scopes.includes('orders:write')}"
+
+    # toolkits/orders/toolkit.yaml
+    toolkit: orders
+    description: The orders app, and its settings.
+    instructions: { include: ./orders.md }
+    tools:
+      read_file: { call: grouse/gitlab/repository/files/read, input: { project: group/orders } }
 
     # toolkits/orders/orders.md
     The orders app is built from the repository group/orders. Its settings are
@@ -230,18 +231,15 @@ To add the agent:
     # grouse/gitlab/repository/commits/create.yaml
     include: .packs/gitlab/repository/commits/create.yaml
 
-    # .corbieignore, with the toolkit's file added
-    .packs/
-    people/scopes.yaml
-    toolkits/orders/toolkit.yaml
-
-- Ana is offered `orders` with both tools. Di is offered `orders` with `read_file` only, since she lacks `orders:write`, and her press on a question counts, since she holds `orders:approve`.
+- Ana is offered `orders` and `change_file`. Di is offered `orders` only, since she lacks `orders:write`, and her press on a question counts, since she holds `orders:approve`.
 - A person `people/scopes.yaml` does not hold is answered by the agent with no toolkit, and the log of that run of `people/find` names the email and the ID it looked for: `corbie run show <id> --record`.
-- The model is given `instructions:` when it opens the toolkit.
+- The model is given `instructions:` when it opens the toolkit, and is then shown its tool as `orders_read_file`.
 - A tool written `call:` takes its description and arguments from the machine at its location, without the names its `input:` fixes, so the model never names the project. A schedule, another machine or a client can run that machine without the agent.
-- A line of `.corbieignore` is a path and takes no `*`. A machine in a toolkit's directory has the location its path gives, such as `toolkits/infra/restart`.
+- A tool inside a toolkit takes no `when:`, so `change_file`, which only some people are offered, is an entry of the agent.
+- A toolkit's file is a machine, as is each machine in its directory, at the location its path gives, such as `toolkits/infra/restart`.
 - A tool that uses no secret is written in place in the toolkit's file, which costs one file and one run less, and runs at the agent's location. A tool that uses a secret is a machine in the toolkit's directory, called with `call:`, with the secret set at its location or the toolkit's directory, as `--at /my-bot/toolkits/infra`, so the agent's run cannot read it.
-- `change_file` has `approve: true`, so it waits for the agent's hook, the approval, until someone with `orders:approve`, who did not ask, presses yes in `#orders-team`. The channel, the scope and the wait are the tool's `meta:`, which the hook reads as `job.meta`. A no, or no press within a day, goes back to the model as `denied`.
+- `change_file` has `approve: true`, so it waits for the agent's hook, the approval, until someone with `orders:approve`, who did not ask, presses yes in `#orders-team`. The channel, the scope and the wait are its `meta:`, which the hook reads as `job.meta`. A no, or no press within a day, goes back to the model as `denied`.
+- A toolkit's tool waits for the same hook with its own `approve: true` and `meta:`.
 - Any machine at `agents/assistant` with the same input and output answers in its place, a flow with no model included, as `.packs/bot/pages/bot-design.txt` says under The agent.
 
 Common changes
@@ -249,7 +247,7 @@ Common changes
 
   The bot should                                    Change
   look something up, or do something, when asked    a tool in a toolkit, and a machine in its directory when it uses a secret
-  let some people do more                           a toolkit's or a tool's when:, and their scopes
+  let some people do more                           the when: of an entry in the agent's tools:, and their scopes
   ask other people about one tool                   that tool's meta:
   answer in one channel with other toolkits         a second agent and conversation, and a rule in the router
   answer some messages with steps of its own        a keyed statechart, and a rule in the router
@@ -389,4 +387,5 @@ Reference
   .packs/bot/pages/bot-design.txt    the runs that answer a message, what each machine takes and gives, and who may do what
   corbie manual a-directory           how corbie run submit brings runs into line with files, and .corbieignore
   corbie manual agent                 an agent's tools, toolkits and when:
+  corbie manual toolkit               a toolkit's fields, and its tools
   corbie manual schedules             a machine that runs at a time

@@ -1,5 +1,6 @@
 # The servers. restart waits for a yes in #infra, from someone with
 # infra:approve, for an hour: the agent's hook reads its meta:.
+toolkit: infra
 description: The servers. Their state, and restarting one.
 instructions: { include: ./infra.md }
 tools:

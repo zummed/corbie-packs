@@ -58,11 +58,11 @@ that run names the run and step that started it as its cause.
 
 1. In the router's record, each message is a send to `/my-bot/conversation#<key>`, naming the conversation's run.
 2. In the conversation's record, each turn is a child run, and the turn's call to `/my-bot/agents/assistant` names the agent's run.
-3. The agent's record shows each tool as a job, a held tool as `hold <tool> for its hooks`, and the approval as a child run, with a child run `place` for each place it asks, whose call to the bot's `chat/ask` names the question's run.
+3. The agent's record shows each call of a toolkit's tool as a child run of the toolkit. That run shows a held tool as `hold <tool> for its hooks`, and the approval as a child run, with a child run `place` for each place it asks, whose call to the bot's `chat/ask` names the question's run.
 4. The question's record shows each press checked, and what the lookup gave for the presser.
 
 These are the records of a message on Telegram whose agent opens the toolkit
-`messages`, and calls `tell`, which waits for alice's yes. A record line is
+`messages`, and calls its tool `tell`, which waits for alice's yes. A record line is
 shown without its time and run, and a name in angle brackets, such as
 `<agent>`, stands for a run's ID.
 
@@ -72,12 +72,13 @@ shown without its time and run, and a name in angle brackets, such as
       step 3  -> job answering: a machine, <turn>
       step 1  -> job asker: a call to /my-bot/people/find, <find>
     corbie run show <agent> --record
-      step 6  -> hold tell for its hooks
-      step 6  -> job tell.approval: a machine, <approval>
+      step 6  -> job messages_tell: a machine, <toolkit>
+      step 1  -> hold tell for its hooks
+      step 1  -> job tell.approval: a machine, <approval>
       step 2  -> job question.0: a machine, <place>
       step 1  -> job asking: a call to /my-bot/grouse/telegram/chat/ask, <question>
-      step 7  <- done from tell.approval {"note":"alice said yes.","ok":true}
-      step 7  -> job tell: a call to /my-bot/grouse/telegram/chat/post, <tell>
+      step 2  <- done from tell.approval {"note":"alice said yes.","ok":true}
+      step 2  -> job tell: a call to /my-bot/grouse/telegram/chat/post, <tell>
     corbie run show <question> --record
       step 4  -> job checking: a machine, <press>
       step 2  <- done from who {"email":"alice@example.com","name":"alice","scopes":["messages","messages:approve"]}
@@ -358,12 +359,13 @@ A reminder whose conversation ended in the meantime starts it again, with no
 earlier turns, so the note says in full what to do. At most 20 reminders wait
 at once in a project, and a stop does not cancel one.
 
-An agent's toolkits are listed under `toolkits:`, each with a `when:` on the
-agent's input, so only a person whose scopes allow it is offered one. A tool
-written `call: <location>` calls a machine of the tree, taking its description
-and arguments from that machine, and fixing any of its input.
-`.packs/bot/pages/bot-project.txt` shows an agent and its toolkit, in a
-directory of its own, under Add an agent.
+An agent names each toolkit under `tools:`, as `machine: <its file>`, with a
+`when:` on the agent's input, so only a person whose scopes allow it is
+offered one. A toolkit's run is a child of the agent's, so the agent's hooks
+are for its tools' jobs. A tool written `call: <location>`, in a toolkit or
+as an entry of the agent, takes its description and arguments from that
+machine and fixes any of its input. `.packs/bot/pages/bot-project.txt` shows an agent and its toolkit,
+in a directory of its own, under Add an agent.
 
 The lookup
 ----------
@@ -577,7 +579,7 @@ Who may do what
 1. Corbie's permissions apply first. A job may do only what its `allow:` says, within the ceilings, and a secret goes only to the host it is bound to.
 2. A service's secrets are set at `/my-bot/<bot>/<service>`, and a toolkit's at `/my-bot/toolkits/<name>`, so the agent's run, at `/my-bot/agents/assistant`, cannot read them.
 3. An agent is allowed only its model. Its model calls the agent's own tools, the tools of each toolkit it was offered and opened, and Corbie's tools that read blobs.
-4. A toolkit is offered only when its `when:` holds on the agent's input, which holds the asker's scopes from the lookup.
+4. An entry of the agent's `tools:`, a toolkit or a tool, is offered only when its `when:` holds on the agent's input, which holds the asker's scopes from the lookup.
 5. A tool marked `approve: true` waits for the agent's hook, the approval, which counts a press only from someone whose scopes hold its approvers.
 
 What the packs do not defend against
@@ -603,3 +605,4 @@ Reference
   corbie manual machines-together      sends, calls and receive:
   corbie manual hooks                  how a held job waits for its hooks
   corbie manual agent                  an agent's tools, toolkits and when:
+  corbie manual toolkit                a toolkit's fields, and its tools

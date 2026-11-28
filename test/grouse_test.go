@@ -224,18 +224,27 @@ func shown(c llmstandin.Call) map[string]map[string]any {
 	return out
 }
 
-// toolkitsOffered gives the toolkits the tool open offers in a call.
+// toolkitsOffered gives the toolkits a call's first message says the model
+// can open.
 func toolkitsOffered(c llmstandin.Call) []string {
-	open := shown(c)["open"]
-	if open == nil {
+	if len(c.Messages) == 0 {
 		return nil
 	}
-	schema, _ := open["input_schema"].(map[string]any)
-	properties, _ := schema["properties"].(map[string]any)
-	toolkit, _ := properties["toolkit"].(map[string]any)
+	first, _ := c.Messages[0].(map[string]any)
+	parts, _ := first["content"].([]any)
 	var out []string
-	for _, name := range toolkit["enum"].([]any) {
-		out = append(out, fmt.Sprint(name))
+	for _, part := range parts {
+		text, _ := part.(map[string]any)["text"].(string)
+		var told struct {
+			List     string
+			Toolkits []struct{ Name string }
+		}
+		if json.Unmarshal([]byte(text), &told) != nil || told.List != "toolkits" {
+			continue
+		}
+		for _, toolkit := range told.Toolkits {
+			out = append(out, toolkit.Name)
+		}
 	}
 	return out
 }
@@ -359,9 +368,9 @@ func (g *grouse) pollUntil(what string, cond func() bool) {
 // follows.
 var restartOrders2 = map[string][]llmstandin.Reply{
 	"orders-2 is stuck": {
-		calls("open", `{"toolkit": "infra"}`),
-		calls("vm_status", `{}`),
-		calls("restart", `{"name": "orders-2"}`),
+		calls("open", `{"list": "toolkits", "name": "infra"}`),
+		calls("infra_vm_status", `{}`),
+		calls("infra_restart", `{"name": "orders-2"}`),
 		{Text: "Restarted orders-2."},
 	},
 }
@@ -371,7 +380,7 @@ var restartOrders2 = map[string][]llmstandin.Reply{
 //
 //  1. The listener hears the message, and the router sends it to the conversation of the thread, Cy and support.
 //  2. The turn calls the lookup, shows a status, and calls agents/support with Cy's scopes.
-//  3. The model is offered infra and not orders, opens infra, is given its instructions, and is shown vm_status and restart.
+//  3. The model is offered infra and not orders, opens infra, is given its instructions, and is shown infra_vm_status and infra_restart.
 //  4. restart is held, and the approval asks in #infra, quoting what Cy asked.
 //  5. Bo presses yes, the question checks his scopes, and shows his answer in place of the buttons.
 //  6. toolkits/infra/restart runs at its own location, which sends the hypervisor its key.
@@ -400,14 +409,14 @@ func TestGrouseOneQuestionRunByRun(t *testing.T) {
 	if got := toolkitsOffered(cy[0]); !slices.Equal(got, []string{"infra"}) {
 		t.Errorf("Cy was offered %v", got)
 	}
-	if tools := shown(cy[0]); tools["vm_status"] != nil || tools["restart"] != nil || tools["read_file"] != nil {
+	if tools := shown(cy[0]); tools["infra_vm_status"] != nil || tools["infra_restart"] != nil || tools["orders_read_file"] != nil {
 		t.Errorf("Cy's model was shown a toolkit's tools before opening it: %v", slices.Sorted(maps.Keys(tools)))
 	}
 	if got := results(cy[1]); len(got) != 1 || !strings.Contains(got[0], "The virtual machines run on one hypervisor.") {
 		t.Errorf("opening infra gave %v", got)
 	}
 	tools := shown(cy[1])
-	if tools["vm_status"] == nil || tools["restart"] == nil || !slices.Equal(arguments(tools["restart"]), []string{"name"}) || tools["restart"]["description"] != "Restart one virtual machine by its name." {
+	if tools["infra_vm_status"] == nil || tools["infra_restart"] == nil || !slices.Equal(arguments(tools["infra_restart"]), []string{"name"}) || tools["infra_restart"]["description"] != "Restart one virtual machine by its name." {
 		t.Errorf("after opening infra the model was shown %v", tools)
 	}
 	if got := results(cy[2]); !strings.Contains(got[1], "orders-2") || !strings.Contains(got[1], "stuck") {
@@ -433,7 +442,7 @@ func TestGrouseOneQuestionRunByRun(t *testing.T) {
 			id = run.Parent
 		}
 	}
-	if want := []string{"chat-ask", "place", "approval", "support", "turn", "conversation", "grouse"}; !slices.Equal(chain, want) {
+	if want := []string{"chat-ask", "place", "approval", "infra", "support", "turn", "conversation", "grouse"}; !slices.Equal(chain, want) {
 		t.Errorf("from the question back, the runs are %v", chain)
 	}
 	if got := g.show(asks[0].ID).Output; fmt.Sprint(got) != "map[by:Bo choice:yes]" {
@@ -441,7 +450,8 @@ func TestGrouseOneQuestionRunByRun(t *testing.T) {
 	}
 	agent := stubs(t, g.world, "support")[0]
 	restarts := g.at("toolkits/infra/restart.yaml")
-	if len(restarts) != 1 || restarts[0].Cause.Run != agent.ID || restarts[0].Status != "done" {
+	// The restart is called by the toolkit's run, a child of the agent's.
+	if len(restarts) != 1 || g.show(restarts[0].Cause.Run).Machine != "infra" || g.show(restarts[0].Cause.Run).Parent != agent.ID || restarts[0].Status != "done" {
 		t.Errorf("the restart's runs are %+v", restarts)
 	}
 	conversations := keyed(g.world, "conversation.yaml")
@@ -490,7 +500,7 @@ func TestGrousePressWithoutTheScopeIsRefused(t *testing.T) {
 // count for other questions but not this one. Ed's counts.
 func TestGrouseOwnRequestIsNotApprovedByTheAsker(t *testing.T) {
 	g := newGrouse(t, map[string][]llmstandin.Reply{
-		"restart orders-1": {calls("open", `{"toolkit": "infra"}`), calls("restart", `{"name": "orders-1"}`), {Text: "Restarted orders-1."}},
+		"restart orders-1": {calls("open", `{"list": "toolkits", "name": "infra"}`), calls("infra_restart", `{"name": "orders-1"}`), {Text: "Restarted orders-1."}},
 	}, nil)
 	g.say("UBO", "CSUP", "10.0", "", "<@UBOT> restart orders-1 please")
 	question := g.question("CINF", 1)
@@ -517,7 +527,7 @@ func TestGrouseOwnRequestIsNotApprovedByTheAsker(t *testing.T) {
 // restarted.
 func TestGrouseNoPressWithinIsNo(t *testing.T) {
 	g := newGrouse(t, map[string][]llmstandin.Reply{
-		"orders-2 is stuck": {calls("open", `{"toolkit": "infra"}`), calls("restart", `{"name": "orders-2"}`), {Text: "I could not restart orders-2."}},
+		"orders-2 is stuck": {calls("open", `{"list": "toolkits", "name": "infra"}`), calls("infra_restart", `{"name": "orders-2"}`), {Text: "I could not restart orders-2."}},
 	}, nil)
 	g.say("UCY", "CSUP", "10.0", "", "<@UBOT> orders-2 is stuck, can you restart it?")
 	g.question("CINF", 1)
@@ -536,19 +546,20 @@ func TestGrouseNoPressWithinIsNo(t *testing.T) {
 	}
 }
 
-// Di, whose scopes hold orders:read and not orders:write, is shown read_file
-// and not change_file, and her model's call of change_file comes back as no
-// such tool. Ana, who holds both, is shown both. Neither is shown project,
-// which the toolkit fixes, and neither is offered infra.
+// Di, whose scopes hold orders:read and not orders:write, is shown
+// orders_read_file and not change_file, and her model's call of change_file
+// comes back as no such tool. Ana, who holds both, is shown both. Neither is
+// shown project, which the tool and the entry fix, and neither is offered
+// infra.
 func TestGrouseToolsFollowScopes(t *testing.T) {
 	g := newGrouse(t, map[string][]llmstandin.Reply{
 		"what is in config/app.yaml": {
-			calls("open", `{"toolkit": "orders"}`),
+			calls("open", `{"list": "toolkits", "name": "orders"}`),
 			calls("change_file", `{"branch": "main", "message": "x", "actions": [{"action": "update", "file_path": "config/app.yaml", "content": "debug: true\n"}]}`),
-			calls("read_file", `{"path": "config/app.yaml"}`),
+			calls("orders_read_file", `{"path": "config/app.yaml"}`),
 			{Text: "It sets debug to false."},
 		},
-		"read config/app.yaml": {calls("open", `{"toolkit": "orders"}`), calls("read_file", `{"path": "config/app.yaml"}`), {Text: "It sets debug to false."}},
+		"read config/app.yaml": {calls("open", `{"list": "toolkits", "name": "orders"}`), calls("orders_read_file", `{"path": "config/app.yaml"}`), {Text: "It sets debug to false."}},
 	}, nil)
 	g.say("UDI", "DDI", "10.0", "", "what is in config/app.yaml?")
 	g.replied("DDI", "", "It sets debug to false.")
@@ -557,8 +568,8 @@ func TestGrouseToolsFollowScopes(t *testing.T) {
 		t.Errorf("Di was offered %v", got)
 	}
 	tools := shown(di[1])
-	if tools["read_file"] == nil || tools["change_file"] != nil || !slices.Equal(arguments(tools["read_file"]), []string{"path", "ref"}) {
-		t.Errorf("Di was shown %v, read_file with %v", slices.Sorted(maps.Keys(tools)), arguments(tools["read_file"]))
+	if tools["orders_read_file"] == nil || tools["change_file"] != nil || !slices.Equal(arguments(tools["orders_read_file"]), []string{"path", "ref"}) {
+		t.Errorf("Di was shown %v, read_file with %v", slices.Sorted(maps.Keys(tools)), arguments(tools["orders_read_file"]))
 	}
 	got := results(di[3])
 	if !strings.Contains(got[1], `there is no tool named \"change_file\"`) || !strings.Contains(got[2], "debug: false") {
@@ -568,7 +579,7 @@ func TestGrouseToolsFollowScopes(t *testing.T) {
 	g.replied("DANA", "", "It sets debug to false.")
 	ana := g.calls("Ana", "config/app.yaml")
 	tools = shown(ana[1])
-	if tools["read_file"] == nil || tools["change_file"] == nil || slices.Contains(arguments(tools["change_file"]), "project") {
+	if tools["orders_read_file"] == nil || tools["change_file"] == nil || slices.Contains(arguments(tools["change_file"]), "project") {
 		t.Errorf("Ana was shown %v", tools)
 	}
 	if !slices.Equal(toolkitsOffered(ana[0]), []string{"orders"}) {
@@ -588,7 +599,7 @@ func TestGrouseToolsFollowScopes(t *testing.T) {
 func TestGrouseMessagesDuringATurn(t *testing.T) {
 	script := maps.Clone(restartOrders2)
 	script["orders-3 too"] = []llmstandin.Reply{{Text: "orders-3 and orders-4 are running."}}
-	script["what is in config/app.yaml"] = []llmstandin.Reply{calls("open", `{"toolkit": "orders"}`), calls("read_file", `{"path": "config/app.yaml"}`), {Text: "It sets debug to false."}}
+	script["what is in config/app.yaml"] = []llmstandin.Reply{calls("open", `{"list": "toolkits", "name": "orders"}`), calls("orders_read_file", `{"path": "config/app.yaml"}`), {Text: "It sets debug to false."}}
 	g := newGrouse(t, script, nil)
 	g.say("UCY", "CSUP", "10.0", "", "<@UBOT> orders-2 is stuck, can you restart it?")
 	question := g.question("CINF", 1)
@@ -634,7 +645,7 @@ func TestGrouseMessagesDuringATurn(t *testing.T) {
 // the first is posted is kept, and posted after it.
 func TestGrouseGitLab(t *testing.T) {
 	g := newGrouse(t, map[string][]llmstandin.Reply{
-		"what is in config/app.yaml": {calls("open", `{"toolkit": "orders"}`), calls("read_file", `{"path": "config/app.yaml"}`), {Text: "It sets debug to false."}},
+		"what is in config/app.yaml": {calls("open", `{"list": "toolkits", "name": "orders"}`), calls("orders_read_file", `{"path": "config/app.yaml"}`), {Text: "It sets debug to false."}},
 	}, nil)
 	g.gl.comment("group/orders", 1, 5, "@bot what is in config/app.yaml?")
 	g.pollUntil("the note", func() bool { return len(g.gl.said()) == 1 })
@@ -732,7 +743,7 @@ func TestGrouseDeploys(t *testing.T) {
 func TestGrouseGitLabRequestApprovedOnSlack(t *testing.T) {
 	g := newGrouse(t, map[string][]llmstandin.Reply{
 		"set debug to true": {
-			calls("open", `{"toolkit": "orders"}`),
+			calls("open", `{"list": "toolkits", "name": "orders"}`),
 			calls("change_file", `{"branch": "main", "message": "Debug on", "actions": [{"action": "update", "file_path": "config/app.yaml", "content": "debug: true\n"}]}`),
 			{Text: "Changed config/app.yaml."},
 		},
@@ -784,14 +795,13 @@ func TestGrouseSecurity(t *testing.T) {
 	script := maps.Clone(restartOrders2)
 	script["orders-2 is stuck"] = append([]llmstandin.Reply{calls("peek_slack", `{}`), calls("peek_infra", `{}`)}, script["orders-2 is stuck"]...)
 	g := newGrouse(t, script, func(dir string) {
-		setSite(t, dir, "agents/support.yaml", "toolkits:\n", `tools:
+		setSite(t, dir, "agents/support.yaml", "tools:\n", `tools:
   peek_slack:
     description: Reads the Slack token.
     job: { script: ./peek.js, input: { name: SLACK_TOKEN }, allow: ["secret:SLACK_TOKEN@net:example.com"] }
   peek_infra:
     description: Reads the hypervisor's key.
     job: { script: ./peek.js, input: { name: HYPERVISOR_KEY }, allow: ["secret:HYPERVISOR_KEY@net:example.com"] }
-toolkits:
 `)
 		write(t, dir, map[string]string{
 			"agents/peek.js": "return secrets.get(input.name)",
@@ -1000,7 +1010,7 @@ func TestGrouseInitKeepsTheProject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{".corbieignore", "conversation.yaml", "grouse/gitlab/grouse.yaml", "grouse/slack/chat/ask.yaml", "grouse/slack/grouse.yaml", "people/scopes.yaml"}
+	want := []string{"conversation.yaml", "grouse/gitlab/grouse.yaml", "grouse/slack/chat/ask.yaml", "grouse/slack/grouse.yaml", "people/scopes.yaml"}
 	if !slices.Equal(differ, want) {
 		t.Errorf("Differ names %v", differ)
 	}
@@ -1036,13 +1046,13 @@ func projectFiles(t *testing.T, dir string) map[string]string {
 //
 //  1. A changed router starts again with its listener, and the conversation, its agent and question go on; a press through the new listener answers the question.
 //  2. A changed agent, here its included system text, answers the next message.
-//  3. A changed toolkit while an approval waits cancels nothing: the approval and the restart finish, and the next turn is given the new instructions.
+//  3. A changed toolkit while an approval waits cancels nothing: the approval and the restart finish. A new conversation that opens it is given the new instructions.
 func TestGrouseChangedFiles(t *testing.T) {
 	script := maps.Clone(restartOrders2)
-	// infra stays open in the conversation while its instructions are as
-	// they were given, so the next message calls its tool at once.
-	script["orders-1 too"] = []llmstandin.Reply{calls("restart", `{"name": "orders-1"}`), {Text: "Restarted orders-1."}}
-	script["and orders-3"] = []llmstandin.Reply{calls("open", `{"toolkit": "infra"}`), {Text: "Opened."}}
+	// infra stays open in the conversation, so the next message calls its
+	// tool at once.
+	script["orders-1 too"] = []llmstandin.Reply{calls("infra_restart", `{"name": "orders-1"}`), {Text: "Restarted orders-1."}}
+	script["and orders-3"] = []llmstandin.Reply{calls("open", `{"list": "toolkits", "name": "infra"}`), {Text: "Opened."}}
 	g := newGrouse(t, script, nil)
 	g.say("UCY", "CSUP", "10.0", "", "<@UBOT> orders-2 is stuck, can you restart it?")
 	question := g.question("CINF", 1)
@@ -1086,8 +1096,8 @@ func TestGrouseChangedFiles(t *testing.T) {
 	if got := g.hv.restarted(); !slices.Equal(got, []string{"orders-2", "orders-1"}) {
 		t.Errorf("restarted %v", got)
 	}
-	g.say("UCY", "CSUP", "12.0", "10.0", "<@UBOT> and orders-3")
-	g.replied("CSUP", "10.0", "Opened.")
+	g.say("UCY", "CSUP", "12.0", "", "<@UBOT> and orders-3")
+	g.replied("CSUP", "12.0", "Opened.")
 	calls := g.calls("Cy", "and orders-3")
 	if got := results(calls[len(calls)-1]); !strings.Contains(got[len(got)-1], "two hypervisors") {
 		t.Errorf("opening infra gave %s", got[len(got)-1])

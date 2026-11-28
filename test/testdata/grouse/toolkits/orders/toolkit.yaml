@@ -1,14 +1,8 @@
-# The orders app. read_file is offered with the toolkit; change_file only to a
-# person whose scopes hold orders:write, and it waits for a yes in
-# #orders-team, from someone with orders:approve, for a day: the agent's hook
-# reads its meta:.
-description: The orders app. How it is deployed, its settings, and changing them.
+# The orders app. read_file fixes the project, so the model reads no other
+# repository. The tool that changes a file is an entry of the agent, offered
+# to a person whose scopes hold orders:write.
+toolkit: orders
+description: The orders app. How it is deployed, and its settings.
 instructions: { include: ./orders.md }
 tools:
   read_file: { call: grouse/gitlab/repository/files/read, input: { project: group/orders } }
-  change_file:
-    call: grouse/gitlab/repository/commits/create
-    input: { project: group/orders }
-    approve: true
-    meta: { channel: "#orders-team", approvers: "orders:approve", within: 1d }
-    when: "${input.asker.scopes.includes('orders:write')}"
