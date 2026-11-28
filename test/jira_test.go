@@ -390,7 +390,7 @@ func attachment(id, name, kind string, size int, author string, at time.Time) ma
 
 // A comment's message has the files it names, and of two with one name the
 // newest. An external image names no file. The issue's files are in the
-// history, with the issue. attachment/get downloads each, except one over
+// history, with the issue. files/get downloads each, except one over
 // 32 MiB, which it gives without its contents.
 func TestJiraCommentHasTheFilesItNames(t *testing.T) {
 	at := time.Now().Add(time.Second)
@@ -419,14 +419,14 @@ func TestJiraCommentHasTheFilesItNames(t *testing.T) {
 	}
 	// The conversation downloaded them before it answered.
 	before := len(j.downloaded())
-	id := w.start(bot+"/jira/attachment/get.yaml", map[string]any{"attachments": m["attachments"]})
+	id := w.start(bot+"/jira/files/get.yaml", map[string]any{"attachments": m["attachments"]})
 	got := ended(w, id).([]any)
 	if downloaded := j.downloaded()[before:]; !slices.Equal(slices.Sorted(slices.Values(downloaded)), []string{"2", "4"}) {
 		t.Errorf("Jira gave the files %v", downloaded)
 	}
 	film := got[1].(map[string]any)
 	if film["file"] != nil || film["size"] != float64(64<<20) || got[0].(map[string]any)["file"] == nil {
-		t.Errorf("attachment/get gave %v", got)
+		t.Errorf("files/get gave %v", got)
 	}
 }
 
@@ -483,7 +483,7 @@ func TestJiraTokenGoesOnlyToTheSite(t *testing.T) {
 	j.contents = map[string]string{"100": "hello"}
 	w, dir := jiraWorld(t, j, nil)
 	w.sync(dir)
-	id := w.start(bot+"/jira/attachment/get.yaml", map[string]any{"attachments": []any{map[string]any{"name": "log.txt", "type": "text/plain", "size": 5, "id": "100"}}})
+	id := w.start(bot+"/jira/files/get.yaml", map[string]any{"attachments": []any{map[string]any{"name": "log.txt", "type": "text/plain", "size": 5, "id": "100"}}})
 	ended(w, id)
 	for _, line := range seen.all() {
 		if strings.Contains(line, "/attachment/content/") && !strings.Contains(line, "auth=Basic") {

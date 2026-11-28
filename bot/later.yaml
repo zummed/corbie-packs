@@ -8,8 +8,8 @@
 #   minutes   how long it waits: rounded, and held from 1 to 1440, a day
 #   note      what the agent is to do then
 #   back      the conversation's run, { at, key }, which the conversation gives the agent
-#   message   the service, place, chat, user, name, email and answers of the
-#             message the reminder was set in
+#   message   the message the reminder was set in, of which it sends on the
+#             service, place, chat, user, name, email and answers
 #
 # A conversation that ended in the meantime starts again with the reminder,
 # and no earlier turns. At most 20 reminders wait at once in a project, and a
@@ -20,16 +20,13 @@ limits: { runs: 20 }
 receive: [agents/*]
 allow: ["send:${input.back.at}"]
 title: "${'In ' + input.minutes + ' minutes: ' + input.note}"
-initial: waiting
+initial: setting
 states:
+  # Gives the minutes it waits and the message it sends, as this state's output.
+  setting:
+    job: { script: ./later.js, input: { minutes: "${input.minutes}", note: "${input.note}", message: "${input.message}" } }
+    on: { done: waiting }
   waiting:
-    timers: { due: "${Math.min(Math.max(Math.round(Number(input.minutes)) || 1, 1), 1440) + 'm'}" }
-    # `later` is the minutes the timer waited, the same sum as the timer's.
-    on:
-      due:
-        go: sent
-        send:
-          to: "${input.back}"
-          event: message
-          data: "${Object.assign({}, input.message, { text: String(input.note), later: Math.min(Math.max(Math.round(Number(input.minutes)) || 1, 1), 1440) })}"
+    timers: { due: "${states.setting.output.minutes + 'm'}" }
+    on: { due: { go: sent, send: { to: "${input.back}", event: message, data: "${states.setting.output.message}" } } }
   sent: { end: done }

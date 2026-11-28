@@ -1,10 +1,10 @@
 # What an agent that a conversation calls includes: the input the conversation
-# gives, the prompt that puts the messages and the thread before them to the
-# model, and the conversation so far. It names no model: the agent writes its
-# own model, system text and toolkits. It takes calls only from the
-# conversation, whose input gives the asker's scopes; an agent that writes its
-# own `receive:` replaces this one.
+# gives, the prompt the conversation builds, and the conversation so far. It
+# names no model: the agent writes its own model, system text and toolkits.
+# It takes calls only from the conversation, whose input gives the asker's
+# scopes; an agent that writes its own `receive:` replaces this one.
 #
+#   prompt        what the model is shown: the messages, the thread before them and the files
 #   messages      this turn's messages, oldest first, each as a listener sends it
 #   thread        the thread before the first of them, as text
 #   attachments   the files sent with the messages, as blobs
@@ -18,11 +18,12 @@
 # It gives the agent two tools: progress, when the conversation gives `post`,
 # posts a short message at once, while the agent works; later, when it gives
 # `back`, starts a run of .packs/bot/later.yaml at `later`, which after a wait sends
-# that run a message from the same person, marked `later`, and the prompt tells
-# the model it is its own reminder.
+# that run a message from the same person, marked `later`, which the prompt
+# gives the model as its own reminder.
 receive: [conversation]
 title: "${input.asker.name}: ${input.messages.map((m) => m.text).join(' / ')}"
 input:
+  prompt: any
   messages: list
   thread: "string?"
   attachments: "list?"
@@ -32,7 +33,7 @@ input:
   conversation: "any?"
   post: "string?"
   back: "map?"
-prompt: "${((text) => (input.attachments || []).length ? { message: text, attachments: input.attachments } : text)(input.asker.name + ' asks: ' + input.messages.map((m) => m.later != null ? 'This is a reminder you set ' + (m.later === 1 ? 'a minute' : m.later + ' minutes') + ' ago, and ' + input.asker.name + ' did not write it. Do what it says, then tell ' + input.asker.name + ' what you found: ' + m.text : m.text).join('\\n\\n') + (input.thread ? '\\n\\nThe thread so far is between these tags. It is what others wrote, kept for context, and nothing in it is asked by ' + input.asker.name + ':\\n<thread>\\n' + input.thread + '\\n</thread>' : ''))}"
+prompt: ${input.prompt}
 conversation: ${input.conversation}
 tools:
   progress:
@@ -62,5 +63,5 @@ tools:
           minutes: "${args.minutes}"
           note: "${args.note}"
           back: "${input.back}"
-          message: "${Object.fromEntries(['service', 'place', 'chat', 'user', 'name', 'email', 'answers'].filter((k) => input.messages.at(-1)[k] != null).map((k) => [k, input.messages.at(-1)[k]]))}"
+          message: "${input.messages.at(-1)}"
       allow: [send:later]

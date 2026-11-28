@@ -80,7 +80,7 @@ shown without its time and run, and a name in angle brackets, such as
       step 2  <- done from tell.approval {"note":"alice said yes.","ok":true}
       step 2  -> job tell: a call to /my-bot/grouse/telegram/chat/post, <tell>
     corbie run show <question> --record
-      step 4  -> job checking: a machine, <press>
+      step 5  -> job checking: a machine, <press>
       step 2  <- done from who {"email":"alice@example.com","name":"alice","scopes":["messages","messages:approve"]}
 
 Who may talk to whom
@@ -146,7 +146,7 @@ below but those under `<bot>/<service>/`, which that service's pack starts.
   <bot>/<service>/chat/show.yaml     include: .packs/<service>/chat/show.yaml, with receive:
   <bot>/slack/assistant/status.yaml  include: .packs/slack/assistant/status.yaml
   <bot>/telegram/chat/status.yaml    include: .packs/telegram/chat/status.yaml
-  <bot>/<service>/files/get.yaml     include: .packs/<service>/files/get.yaml; on Jira attachment/get.yaml
+  <bot>/<service>/files/get.yaml     include: .packs/<service>/files/get.yaml
   AGENTS.md, CLAUDE.md, .mcp.json    for a model that changes the project
 
 `corbie add` rewrites a pack's directory under `.packs/` whole. A project
@@ -158,12 +158,12 @@ others' files name them.
   .packs/slack/                          chat/post, chat/show, assistant/status, files/get, files/upload, conversations/replies
   .packs/telegram/                       chat/post, chat/show, chat/status, files/get, files/send
   .packs/gitlab/                         chat/post, chat/show, issues/read, issues/notes/create, issues/notes/list, uploads/create, files/get, repository/files/read, repository/commits/create, pipeline/create, api.js
-  .packs/jira/                           chat/post, chat/show, issue/comment/create, issue/comment/list, issue/attachments/create, attachment/get, api.js
-  .packs/bot/chat/ask.yaml               the question, the same on every service
+  .packs/jira/                           chat/post, chat/show, issue/comment/create, issue/comment/list, issue/attachments/create, files/get, api.js
+  .packs/bot/chat/ask.yaml, key.js       the question, the same on every service
   .packs/bot/approval.yaml, approval.js  the approval, which a machine names as a hook
   .packs/bot/people/file.yaml, file.js   the lookup that reads people/scopes.yaml
   .packs/bot/agent.yaml                  included by an agent: its input, prompt, conversation, receive: and the tools progress and later
-  .packs/bot/later.yaml                  the reminder that later.yaml places
+  .packs/bot/later.yaml, later.js        the reminder that later.yaml places
   .packs/bot/ballot.yaml                 the ballot that ballot.yaml places
   .packs/bot/answers.yaml                the run for each question that answers.yaml places
   .packs/bot/filters/                    words.yaml and words.js, a filter; model.yaml, included by an agent that is one
@@ -284,7 +284,7 @@ each turn is a flow it runs as a child, whose stages are written in the file.
 2. `thread` turns the first message's history into text, and `format` says how to write for its service.
 3. A status stage shows `Working...` under a Slack thread, or "typing" on Telegram.
 4. `files` downloads every message's files with the bot's `files/get`, when there are any.
-5. `answer` calls `agents/assistant`.
+5. `prompt` builds what the model is shown from the messages, the thread and the files, and `answer` calls `agents/assistant` with it.
 6. A second child run clears Slack's status, and posts the reply with the bot's `chat/post`.
 
 - Messages that come during a turn are kept, and the next turn answers all of them, oldest first. The run keeps at most 100, and drops the 101st.
@@ -331,9 +331,10 @@ The agent
 
 An agent is any machine at `agents/assistant`. The conversation calls it with
 this input, and reads `reply` and `conversation` from its output. An agent of
-type agent includes `.packs/bot/agent.yaml`, which gives it this input, the prompt
-and `receive: [conversation]`, and names no model.
+type agent includes `.packs/bot/agent.yaml`, which gives it this input,
+`prompt: ${input.prompt}` and `receive: [conversation]`, and names no model.
 
+  prompt          what the model is shown: the messages, the thread before them and the files
   messages        this turn's messages, oldest first, each as the listener sent it
   thread          the thread before the first of them, as text
   attachments     the messages' files, each with file, its contents as a blob
@@ -517,7 +518,7 @@ may call it with `send:` for it in its `allow:`.
   chat/ask                     the question, as under Asking a person
   slack assistant/status       { in, text }: an empty text clears the status
   telegram chat/status         { in, text }: "typing" for five seconds
-  files/get, attachment/get    { attachments }: each with file, its contents as a blob; at most 32 MiB, or 20 MB on Telegram
+  files/get                    { attachments }: each with file, its contents as a blob; at most 32 MiB, or 20 MB on Telegram
   slack files/upload           { in, name, file }: in is a conversation, a channel's #name or a member ID
   telegram files/send          { in, name, file }
   slack conversations/replies  { in, at }: the thread before a message

@@ -4,9 +4,10 @@
 # 1. A message is added to a list, and messages that come while the bot
 #    answers are added to the list too.
 # 2. The turn answers the whole list: the lookup gives the person's name,
-#    email and scopes, the status shows, the files are downloaded, and the
-#    agent at agents/assistant answers with the toolkits those scopes allow,
-#    told how to write for the service.
+#    email and scopes, the status shows, the files are downloaded, the prompt
+#    gives the model the messages, the thread and the files, and the agent at
+#    agents/assistant answers with the toolkits those scopes allow, told how
+#    to write for the service.
 # 3. Slack's status is cleared, and the reply is posted where the messages
 #    came from. A failed turn posts "That could not be answered.", and the
 #    next turn starts a new conversation with the agent. So does a reply whose
@@ -63,64 +64,72 @@ states:
     defer: [message]
     job:
       input:
+        service: "${states.adding.output[0].service}"
+        in: "${states.adding.output[0].chat}"
+        key: "${run.key}"
         messages: "${states.adding.output}"
         conversation: "${(states.replying.output || {}).conversation}"
-        key: "${run.key}"
       machine:
         flow: turn
         title: "${input.messages.map((m) => m.text).join(' / ')}"
-        input: { messages: list, conversation: "any?", key: string }
+        input: { service: string, in: string, key: string, messages: list, conversation: "any?" }
         allow:
           - send:people/find
           - send:agents/assistant
-          - send:BOT/slack/files/get
-          - send:BOT/telegram/files/get
-          - send:BOT/gitlab/files/get
-          - send:BOT/jira/attachment/get
+          - send:BOT/*/files/get
           - send:BOT/slack/assistant/status
           - send:BOT/telegram/chat/status
         stages:
+          # A filter, for messages the router sends marked unaddressed, is a
+          # stage here such as
+          #   filter:
+          #     when: "${input.messages.every((m) => m.unaddressed)}"
+          #     job: { call: { at: filters/words }, input: { text: "${input.messages.at(-1).text}", words: [build] } }
+          # with the asker's when: "${stages.filter.skipped || stages.filter.output.reply.answer}",
+          # which skips the asker, and with it the prompt and the answer.
           asker:
             job:
               call: { at: people/find }
-              input: { service: "${input.messages[0].service}", user: "${input.messages[0].user}", name: "${input.messages[0].name || ''}", email: "${input.messages[0].email || ''}" }
+              input: { service: "${input.service}", user: "${input.messages[0].user}", name: "${input.messages[0].name || ''}", email: "${input.messages[0].email || ''}" }
           thread:
             job:
               script: .packs/shared/history.js
               files: [.packs/shared/thread.js]
               input: { history: "${input.messages[0].history || null}" }
           format:
-            job: { script: .packs/shared/format.js, input: { service: "${input.messages[0].service}" } }
+            job: { script: .packs/shared/format.js, input: { service: "${input.service}" } }
           # Slack shows a status in a thread, and Telegram in a chat.
           status:
-            when: "${input.messages[0].service === 'telegram' || input.messages[0].service === 'slack' && input.messages[0].chat.includes('/')}"
+            when: "${input.service === 'telegram' || (input.service === 'slack' && input.in.includes('/'))}"
             job:
-              call: { at: "${'BOT/' + input.messages[0].service + (input.messages[0].service === 'slack' ? '/assistant/status' : '/chat/status')}" }
-              input: { in: "${input.messages[0].chat}", text: Working on it. }
+              call: { at: "${'BOT/' + input.service + (input.service === 'slack' ? '/assistant/status' : '/chat/status')}" }
+              input: { in: "${input.in}", text: Working on it. }
           files:
             when: "${input.messages.some((m) => (m.attachments || []).length > 0)}"
             job:
-              call: { at: "${'BOT/' + input.messages[0].service + (input.messages[0].service === 'jira' ? '/attachment/get' : '/files/get')}" }
+              call: { at: "${'BOT/' + input.service + '/files/get'}" }
               input: { attachments: "${input.messages.flatMap((m) => m.attachments || [])}" }
-          # A filter, for messages the router sends marked unaddressed, is a
-          # stage here such as
-          #   filter:
-          #     when: "${input.messages.every((m) => m.unaddressed)}"
-          #     job: { call: { at: filters/words }, input: { text: "${input.messages.at(-1).text}", words: [build] } }
-          # with the answer's when: "${(stages.files.skipped || stages.files.output) && (stages.filter.skipped || stages.filter.output.reply.answer)}".
+          # What the model is shown: the messages, the thread before them and
+          # the files.
+          prompt:
+            when: "${stages.files.skipped || stages.files.output}"
+            job:
+              script: .packs/shared/prompt.js
+              input: { messages: "${input.messages}", name: "${stages.asker.output.name}", thread: "${stages.thread.output}", attachments: "${stages.files.output || []}" }
           answer:
             when: "${stages.files.skipped || stages.files.output}"
             job:
               call: { at: agents/assistant }
               input:
+                prompt: "${stages.prompt.output}"
                 messages: "${input.messages}"
                 thread: "${stages.thread.output}"
                 attachments: "${stages.files.output || []}"
-                medium: "${input.messages[0].service}"
+                medium: "${input.service}"
                 format: "${stages.format.output}"
                 asker: "${stages.asker.output}"
                 conversation: "${input.conversation}"
-                post: "${'BOT/' + input.messages[0].service + '/chat/post'}"
+                post: "${'BOT/' + input.service + '/chat/post'}"
                 back: { at: conversation, key: "${input.key}" }
           # A redactor, which cleans the reply of what may not be posted outside
           # a direct message, is a stage here such as
@@ -132,21 +141,30 @@ states:
           reply: "${(stages.answer.output || {}).reply}"
           conversation: "${(stages.answer.output || {}).conversation}"
           status_failed: "${!!stages.status.failed}"
-    on: { done: replying, failed: replying, stop: replying }
+    on: { done: replying, failed: failing, stop: stopping }
+  # A failed turn's reply, with no conversation, so the next turn starts a new
+  # one with the agent.
+  failing:
+    defer: [message]
+    output: { reply: That could not be answered., conversation: null }
+    on: { done: replying }
+  # A stopped turn's reply, to the stop, with the conversation as it was before
+  # the turn.
+  stopping:
+    defer: [message]
+    output: { reply: Stopped., answers: "${event.data.answers || ''}", conversation: "${(states.replying.output || {}).conversation}" }
+    on: { done: replying }
+  # Posts the reply of the turn, or of failing or stopping, which is the data
+  # of the event that entered it.
   replying:
     defer: [message]
     job:
       input:
         service: "${states.adding.output[0].service}"
         in: "${states.adding.output[0].chat}"
-        answers: "${(event.name === 'stop' ? event.data.answers : states.adding.output.at(-1).answers) || ''}"
-        text: >-
-          ${event.name === 'done' ? event.data.reply || '' :
-            event.name === 'stop' ? 'Stopped.' :
-            'That could not be answered.'}
-        conversation: >-
-          ${event.name === 'done' ? event.data.conversation :
-            event.name === 'stop' ? (states.replying.output || {}).conversation : null}
+        answers: "${event.data.answers ?? states.adding.output.at(-1).answers ?? ''}"
+        text: "${event.data.reply || ''}"
+        conversation: "${event.data.conversation}"
       machine:
         flow: reply
         title: "${input.text.split('\\n')[0] || 'no reply'}"
@@ -156,12 +174,13 @@ states:
           status:
             when: "${input.service === 'slack' && input.in.includes('/')}"
             job: { call: { at: "${'BOT/' + input.service + '/assistant/status'}" }, input: { in: "${input.in}", text: "" } }
-          # Telegram's post takes answers, the message the reply is to.
+          # Telegram's post replies to answers, the message the reply is to; the
+          # other services' posts take it and do not read it.
           post:
             when: "${input.text}"
             job:
               call: { at: "${'BOT/' + input.service + '/chat/post'}" }
-              input: "${input.service === 'telegram' ? { in: input.in, text: input.text, answers: input.answers } : { in: input.in, text: input.text }}"
+              input: { in: "${input.in}", text: "${input.text}", answers: "${input.answers}" }
         output:
           conversation: "${stages.post.failed ? null : input.conversation}"
           post_failed: "${!!stages.post.failed}"

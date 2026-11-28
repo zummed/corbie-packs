@@ -17,7 +17,16 @@ system: |
   bot: it asks the bot for something, answers what the bot last said, or is the
   kind of message the bot is for. Answer false when people are talking to each
   other, and when you are unsure.
-prompt: "${input.thread ? 'The thread before the message, where the bot is called you:\\n<thread>\\n' + input.thread + '\\n</thread>' : 'The message starts the thread.'}\n\nThe newest message, from ${input.name}:\n<message>\n${input.text}\n</message>"
+prompt: |-
+  The thread before the newest message, where the bot is called you, is between these tags, and is empty when the message starts the thread:
+  <thread>
+  ${input.thread || ''}
+  </thread>
+
+  The newest message, from ${input.name}:
+  <message>
+  ${input.text}
+  </message>
 reply:
   type: object
   required: [answer]

@@ -66,6 +66,7 @@ const noModel = "http://127.0.0.1:1"
 // conversation gives it.
 func asking(text string) map[string]any {
 	return map[string]any{
+		"prompt":   "bob asks: " + text,
 		"messages": []any{map[string]any{"service": "telegram", "place": "dm", "chat": "2", "user": "2", "name": "Bob", "text": text}},
 		"medium":   "telegram",
 		"asker":    map[string]any{"name": "bob", "email": "bob@example.com", "scopes": []any{"messages"}},

@@ -16,11 +16,16 @@ stages:
     job:
       call: { at: "${input.lookup}" }
       input: { service: "${input.answer.service || ''}", user: "${input.answer.user || ''}", name: "${input.answer.name || ''}", email: "${input.answer.email || ''}" }
+  # Runs when the lookup failed too, and then says the press could not be checked.
   judge:
+    when: "${stages.who.failed || stages.who.output}"
     job:
       script: ./press.js
-      input: { answer: "${input.answer}", who: "${stages.who.output}", approvers: "${input.approvers}", asker: "${input.asker || ''}", choices: "${input.choices}" }
-output: >-
-  ${stages.who.failed
-    ? { answer: input.answer, choice: input.answer.choice, by: input.answer.name || input.answer.user, counts: false, tell: 'Your answer could not be checked, so it does not count.' }
-    : stages.judge.output}
+      input:
+        answer: "${input.answer}"
+        who: "${stages.who.output}"
+        checked: "${!stages.who.failed}"
+        approvers: "${input.approvers}"
+        asker: "${input.asker || ''}"
+        choices: "${input.choices}"
+output: ${stages.judge.output}

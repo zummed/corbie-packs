@@ -4,7 +4,7 @@
 //   say               issue/comment/create.yaml
 //   ask, tell, close  chat/show.yaml: the question, a comment on an answer that does not count, the closing comment
 //   history           issue/comment/list.yaml
-//   attachments       attachment/get.yaml
+//   attachments       files/get.yaml
 //   send              issue/attachments/create.yaml
 //
 // It calls the REST API of the Jira Cloud at input.site through api.js.
